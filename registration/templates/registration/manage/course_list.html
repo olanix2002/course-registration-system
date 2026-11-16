@@ -1,0 +1,78 @@
+{% extends "registration/base.html" %}
+
+{% block title %}Courses{% endblock %}
+
+{% block content %}
+  <div class="d-flex justify-content-between align-items-center page-heading">
+    <h1 class="h3 mb-0">Courses</h1>
+    <a class="btn btn-primary" href="{% url 'registration:course_create' %}">New course</a>
+  </div>
+
+  <form method="get" class="row g-2 align-items-end mb-3">
+    <div class="col-auto">
+      <label for="level" class="form-label">Level</label>
+      <select name="level" id="level" class="form-select">
+        <option value="">All levels</option>
+        {% for value, label in levels %}
+          <option value="{{ value }}" {% if selected_level == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-auto">
+      <button type="submit" class="btn btn-outline-secondary">Filter</button>
+    </div>
+  </form>
+
+  {% if courses %}
+    <div class="table-responsive">
+      <table class="table table-striped table-courses align-middle">
+        <thead>
+          <tr>
+            <th scope="col">Code</th>
+            <th scope="col">Title</th>
+            <th scope="col">Level</th>
+            <th scope="col" class="text-end">Units</th>
+            <th scope="col">Type</th>
+            <th scope="col">Status</th>
+            <th scope="col" class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for course in courses %}
+            <tr>
+              <td class="fw-semibold">{{ course.code }}</td>
+              <td>{{ course.title }}</td>
+              <td>{{ course.get_level_display }}</td>
+              <td class="text-end">{{ course.credit_units }}</td>
+              <td>{{ course.get_course_type_display }}</td>
+              <td>
+                {% if course.is_active %}
+                  <span class="badge text-bg-success">Active</span>
+                {% else %}
+                  <span class="badge text-bg-secondary">Inactive</span>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                <a class="btn btn-sm btn-outline-secondary" href="{% url 'registration:course_edit' course.pk %}">Edit</a>
+                <form method="post" action="{% url 'registration:course_toggle_active' course.pk %}" class="d-inline">
+                  {% csrf_token %}
+                  <input type="hidden" name="level" value="{{ selected_level }}">
+                  {% if course.is_active %}
+                    <button type="submit" class="btn btn-sm btn-outline-warning">Deactivate</button>
+                  {% else %}
+                    <button type="submit" class="btn btn-sm btn-outline-success">Activate</button>
+                  {% endif %}
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="alert alert-info">
+      No courses found{% if selected_level %} at {{ selected_level }} level{% endif %}.
+      Use <strong>New course</strong> to add one.
+    </div>
+  {% endif %}
+{% endblock %}

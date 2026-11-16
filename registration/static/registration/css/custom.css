@@ -1,0 +1,16 @@
+/* Small house styles layered on top of Bootstrap. */
+
+body {
+  background-color: #f8f9fa;
+}
+
+.page-heading {
+  border-bottom: 1px solid #dee2e6;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.table-courses td,
+.table-courses th {
+  vertical-align: middle;
+}

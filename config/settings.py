@@ -70,6 +70,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "registration.context_processors.institution",
             ],
         },
     },
@@ -106,6 +107,11 @@ USE_I18N = True
 
 USE_TZ = True
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
+
+# Staff area sign-in. These are URL names, so the paths live in one place.
+LOGIN_URL = "registration:login"
+LOGIN_REDIRECT_URL = "registration:home"
+LOGOUT_REDIRECT_URL = "registration:login"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

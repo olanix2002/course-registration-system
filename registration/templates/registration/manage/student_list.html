@@ -1,0 +1,60 @@
+{% extends "registration/base.html" %}
+
+{% block title %}Students{% endblock %}
+
+{% block content %}
+  <div class="page-heading">
+    <h1 class="h3 mb-0">Students</h1>
+  </div>
+
+  <form method="get" class="row g-2 align-items-end mb-3">
+    <div class="col-sm-4">
+      <label for="q" class="form-label">Name</label>
+      <input type="search" name="q" id="q" class="form-control" value="{{ query }}" placeholder="Search by name">
+    </div>
+    <div class="col-sm-3">
+      <label for="level" class="form-label">Level</label>
+      <select name="level" id="level" class="form-select">
+        <option value="">All levels</option>
+        {% for value, label in levels %}
+          <option value="{{ value }}" {% if selected_level == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-auto">
+      <button type="submit" class="btn btn-outline-secondary">Search</button>
+      <a class="btn btn-link" href="{% url 'registration:student_list' %}">Clear</a>
+    </div>
+  </form>
+
+  {% if students %}
+    <div class="table-responsive">
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Level</th>
+            <th scope="col">Matric number</th>
+            <th scope="col" class="text-end">Courses</th>
+            <th scope="col" class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for student in students %}
+            <tr>
+              <td class="fw-semibold">{{ student.name }}</td>
+              <td>{{ student.get_level_display }}</td>
+              <td>{{ student.matric_no|default:"—" }}</td>
+              <td class="text-end">{{ student.course_count }}</td>
+              <td class="text-end">
+                <a class="btn btn-sm btn-outline-secondary" href="{% url 'registration:student_detail' student.pk %}">View courses</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="alert alert-info">No students found.</div>
+  {% endif %}
+{% endblock %}

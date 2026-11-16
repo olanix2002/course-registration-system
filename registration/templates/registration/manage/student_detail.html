@@ -1,0 +1,62 @@
+{% extends "registration/base.html" %}
+
+{% block title %}{{ student.name }}{% endblock %}
+
+{% block content %}
+  <div class="page-heading">
+    <h1 class="h3 mb-0">{{ student.name }}</h1>
+  </div>
+
+  <dl class="row mb-4">
+    <dt class="col-sm-3">Level</dt>
+    <dd class="col-sm-9">{{ student.get_level_display }}</dd>
+    <dt class="col-sm-3">Matric number</dt>
+    <dd class="col-sm-9">{{ student.matric_no|default:"Not provided" }}</dd>
+  </dl>
+
+  <h2 class="h5 mb-3">Registered courses</h2>
+
+  {% if registrations %}
+    <div class="table-responsive">
+      <table class="table table-striped align-middle">
+        <thead>
+          <tr>
+            <th scope="col">Course code</th>
+            <th scope="col">Title</th>
+            <th scope="col" class="text-end">Credit units</th>
+            <th scope="col">Type</th>
+            <th scope="col">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for registration in registrations %}
+            <tr>
+              <td class="fw-semibold">{{ registration.course.code }}</td>
+              <td>{{ registration.course.title }}</td>
+              <td class="text-end">{{ registration.course.credit_units }}</td>
+              <td>{{ registration.course.get_course_type_display }}</td>
+              <td>
+                {% if registration.course.is_active %}
+                  <span class="badge text-bg-success">Active</span>
+                {% else %}
+                  <span class="badge text-bg-secondary">Inactive</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <th scope="row" colspan="2">Total credit units</th>
+            <th class="text-end">{{ total_credit_units }}</th>
+            <td colspan="2"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  {% else %}
+    <div class="alert alert-info">This student has not registered for any courses yet.</div>
+  {% endif %}
+
+  <a class="btn btn-link px-0" href="{% url 'registration:student_list' %}">Back to students</a>
+{% endblock %}
