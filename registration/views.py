@@ -2,6 +2,7 @@ from django.contrib import messages
 from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from .decorators import staff_required
@@ -288,9 +289,11 @@ def student_printable_form(request):
     context = {
         "student": student,
         "registrations": registrations,
+        # Totalled here, never stored on the student or the registration.
         "total_credit_units": sum(
             registration.course.credit_units for registration in registrations
         ),
+        "printed_on": timezone.localdate(),
     }
     return render(request, "registration/student/print.html", context)
 

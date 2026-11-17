@@ -1,67 +1,118 @@
 /* Small house styles layered on top of Bootstrap. */
 
 body {
-    background-color: #f8f9fa;
+  background-color: #f8f9fa;
 }
 
 .page-heading {
-    border-bottom: 1px solid #dee2e6;
-    padding-bottom: 0.5rem;
-    margin-bottom: 1.5rem;
+  border-bottom: 1px solid #dee2e6;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .table-courses td,
 .table-courses th {
-    vertical-align: middle;
+  vertical-align: middle;
 }
 
 /* Course selection: the tick box column stays narrow. */
 .check-column {
-    width: 2.5rem;
+  width: 2.5rem;
 }
 
 .credit-total-bar {
-    border-top: 1px solid #dee2e6;
-    padding-top: 1rem;
+  border-top: 1px solid #dee2e6;
+  padding-top: 1rem;
 }
 
-/* Printable registration form. */
+/* Printable registration form: an A4-shaped sheet on screen. */
+.print-form {
+  background-color: #fff;
+  max-width: 210mm;
+  margin: 0 auto;
+  padding: 15mm;
+  border: 1px solid #dee2e6;
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.08);
+}
+
 .print-header {
-    border-bottom: 2px solid #212529;
-    padding-bottom: 0.75rem;
+  border-bottom: 2px solid #212529;
+  padding-bottom: 0.75rem;
+}
+
+.print-printed-on {
+  font-size: 0.875rem;
 }
 
 .print-details dt {
-    font-weight: 600;
+  font-weight: 600;
+}
+
+/* Signature block: three rows, each a blank line plus a blank date line. */
+.signature-block {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.signature-row {
+  break-inside: avoid;
+  page-break-inside: avoid;
+  margin-bottom: 1.5rem;
+}
+
+.signature-label {
+  font-weight: 600;
 }
 
 .signature-line {
-    border-top: 1px solid #212529;
-    padding-top: 0.5rem;
-    font-size: 0.875rem;
+  border-bottom: 1px solid #212529;
+  height: 2.25rem;
+}
+
+.signature-caption {
+  font-size: 0.8rem;
+  color: #495057;
+}
+
+/* A4 portrait, 15mm margins, when the page is sent to a printer. */
+@page {
+  size: A4 portrait;
+  margin: 15mm;
 }
 
 @media print {
-    body {
-        background-color: #fff;
-    }
+  body {
+    background-color: #fff;
+  }
 
-    .container {
-        max-width: 100%;
-        margin: 0;
-        padding: 0;
-    }
+  .container {
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+  }
 
-    .print-form {
-        font-size: 12pt;
-    }
+  /* The @page margin already provides the paper margin. */
+  .print-form {
+    font-size: 12pt;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+  }
 
-    .print-table th,
-    .print-table td {
-        border-color: #212529 !important;
-    }
+  /* Never split a course row across two sheets. */
+  .print-table tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
 
-    a[href]::after {
-        content: "";
-    }
+  .print-table th,
+  .print-table td {
+    border-color: #212529 !important;
+  }
+
+  a[href]::after {
+    content: "";
+  }
 }

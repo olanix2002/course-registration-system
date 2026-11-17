@@ -1,77 +1,109 @@
 {% extends "registration/base.html" %}
 
-{% block title %}Registration form{% endblock %}
+{% block title %}Course registration form{% endblock %}
 
 {% block content %}
 <div class="print-form">
-    <header class="print-header">
-        <h1 class="h4 mb-1">{{ INSTITUTION_NAME }}</h1>
-        <p class="mb-0">Course Registration Form</p>
-    </header>
 
-    <dl class="row mt-4 mb-4 print-details">
-        <dt class="col-sm-3">Name</dt>
-        <dd class="col-sm-9">{{ student.name }}</dd>
+  <header class="print-header text-center">
+    <h1 class="h5 mb-1">{{ INSTITUTION_NAME }}</h1>
+    <h2 class="h4 mb-1">COURSE REGISTRATION FORM</h2>
+    <p class="mb-0 print-printed-on">Date printed: {{ printed_on|date:"j F Y" }}</p>
+  </header>
 
-        <dt class="col-sm-3">Level</dt>
-        <dd class="col-sm-9">{{ student.get_level_display }}</dd>
+  <dl class="row mt-4 mb-4 print-details">
+    <dt class="col-sm-3">Matric number</dt>
+    <dd class="col-sm-9">{{ student.matric_no|default:"—" }}</dd>
 
-        <dt class="col-sm-3">Matriculation number</dt>
-        <dd class="col-sm-9">{{ student.matric_no|default:"—" }}</dd>
+    <dt class="col-sm-3">Full name</dt>
+    <dd class="col-sm-9">{{ student.name }}</dd>
 
-        <dt class="col-sm-3">Courses registered</dt>
-        <dd class="col-sm-9">{{ registrations|length }}</dd>
+    <dt class="col-sm-3">Level</dt>
+    <dd class="col-sm-9">{{ student.get_level_display }}</dd>
+  </dl>
 
-        <dt class="col-sm-3">Total credit units</dt>
-        <dd class="col-sm-9">{{ total_credit_units }}</dd>
-    </dl>
+  <table class="table table-bordered table-courses print-table">
+    <thead>
+      <tr>
+        <th scope="col">Course Code</th>
+        <th scope="col">Course Title</th>
+        <th scope="col" class="text-end">Credit Units</th>
+        <th scope="col">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for registration in registrations %}
+        <tr>
+          <td class="fw-semibold">{{ registration.course.code }}</td>
+          <td>{{ registration.course.title }}</td>
+          <td class="text-end">{{ registration.course.credit_units }}</td>
+          <td>{{ registration.course.get_course_type_display }}</td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="4" class="fst-italic">No courses registered.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr>
+        <th scope="row" colspan="2">Total Credit Units</th>
+        <th scope="row" class="text-end">{{ total_credit_units }}</th>
+        <th></th>
+      </tr>
+    </tfoot>
+  </table>
 
-    {% if registrations %}
-        <table class="table table-bordered table-courses print-table">
-            <thead>
-                <tr>
-                    <th scope="col">#</th>
-                    <th scope="col">Code</th>
-                    <th scope="col">Title</th>
-                    <th scope="col" class="text-end">Units</th>
-                    <th scope="col">Type</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for registration in registrations %}
-                    <tr>
-                        <td>{{ forloop.counter }}</td>
-                        <td class="fw-semibold">{{ registration.course.code }}</td>
-                        <td>{{ registration.course.title }}</td>
-                        <td class="text-end">{{ registration.course.credit_units }}</td>
-                        <td>{{ registration.course.get_course_type_display }}</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-            <tfoot>
-                <tr>
-                    <th scope="row" colspan="3">Total credit units</th>
-                    <th scope="row" class="text-end">{{ total_credit_units }}</th>
-                    <th></th>
-                </tr>
-            </tfoot>
-        </table>
-    {% else %}
-        <p class="fst-italic">No courses registered.</p>
-    {% endif %}
+  <div class="signature-block mt-5">
 
-    <div class="row mt-5 print-signatures">
-        <div class="col-6">
-            <div class="signature-line">Student's signature and date</div>
+    <div class="signature-row">
+      <p class="signature-label mb-4">Student's Signature</p>
+      <div class="row">
+        <div class="col-7">
+          <div class="signature-line"></div>
+          <p class="signature-caption mb-0">Signature</p>
         </div>
-        <div class="col-6">
-            <div class="signature-line">Adviser's signature and date</div>
+        <div class="col-5">
+          <div class="signature-line"></div>
+          <p class="signature-caption mb-0">Date</p>
         </div>
+      </div>
     </div>
+
+    <div class="signature-row">
+      <p class="signature-label mb-4">Level Adviser's Signature</p>
+      <div class="row">
+        <div class="col-7">
+          <div class="signature-line"></div>
+          <p class="signature-caption mb-0">Signature</p>
+        </div>
+        <div class="col-5">
+          <div class="signature-line"></div>
+          <p class="signature-caption mb-0">Date</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="signature-row">
+      <p class="signature-label mb-4">Faculty Officer's Signature</p>
+      <div class="row">
+        <div class="col-7">
+          <div class="signature-line"></div>
+          <p class="signature-caption mb-0">Signature</p>
+        </div>
+        <div class="col-5">
+          <div class="signature-line"></div>
+          <p class="signature-caption mb-0">Date</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
 </div>
 
 <div class="mt-4 d-print-none">
-    <button type="button" class="btn btn-primary" onclick="window.print()">Print this form</button>
-    <a class="btn btn-outline-secondary" href="{% url 'students:my_courses' %}">Back to my courses</a>
+  <button type="button" class="btn btn-primary" onclick="window.print()">Print this form</button>
+  <a class="btn btn-outline-secondary" href="{% url 'students:my_courses' %}">Back to my courses</a>
 </div>
 {% endblock %}

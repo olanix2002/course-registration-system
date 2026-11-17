@@ -1,8 +1,10 @@
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
+from django.utils import timezone
 
-from .models import MAX_CREDIT_UNITS, Course, Registration, Student
+from .models import MAX_CREDIT_UNITS, Course, CourseType, Registration, Student
 
 User = get_user_model()
 
@@ -267,13 +269,116 @@ class StudentMyCoursesTests(TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertEqual(Registration.objects.count(), 2)
 
-    def test_printable_form_shows_the_registration(self):
-        response = self.client.get(reverse("students:printable_form"))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "PHY101")
-        self.assertContains(response, "Amina Bello")
-
     def test_start_over_forgets_the_student(self):
         response = self.client.post(reverse("students:start_over"))
         self.assertRedirects(response, reverse("students:home"))
         self.assertNotIn("student_id", self.client.session)
+
+
+class StudentPrintableFormTests(TestCase):
+    """The printable form is a formal document built from saved registrations."""
+
+    def setUp(self):
+        self.core = Course.objects.create(
+            code="PHY101",
+            title="Mechanics",
+            level=100,
+            credit_units=3,
+            course_type=CourseType.CORE,
+        )
+        self.elective = Course.objects.create(
+            code="PHY102",
+            title="Electricity",
+            level=100,
+            credit_units=2,
+            course_type=CourseType.ELECTIVE,
+        )
+        self.student = Student.objects.create(
+            name="Amina Bello", level=100, matric_no="U20PH1234"
+        )
+        Registration.objects.create(student=self.student, course=self.core)
+        Registration.objects.create(student=self.student, course=self.elective)
+        session = self.client.session
+        session["student_id"] = self.student.pk
+        session.save()
+
+    def get_form(self):
+        return self.client.get(reverse("students:printable_form"))
+
+    def test_heading_and_institution_name(self):
+        response = self.get_form()
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "COURSE REGISTRATION FORM")
+        self.assertContains(response, settings.INSTITUTION_NAME)
+
+    def test_date_printed_is_todays_date(self):
+        today = timezone.localdate()
+        expected = f"{today.day} {today.strftime('%B')} {today.year}"
+        response = self.get_form()
+        self.assertContains(response, "Date printed")
+        self.assertContains(response, expected)
+
+    def test_student_details_are_shown(self):
+        response = self.get_form()
+        self.assertContains(response, "U20PH1234")
+        self.assertContains(response, "Amina Bello")
+        self.assertContains(response, "100 Level")
+
+    def test_matric_number_falls_back_to_a_dash(self):
+        self.student.matric_no = ""
+        self.student.save(update_fields=["matric_no"])
+        response = self.get_form()
+        self.assertContains(response, "—")
+
+    def test_each_course_row_is_shown(self):
+        response = self.get_form()
+        self.assertContains(response, "PHY101")
+        self.assertContains(response, "Mechanics")
+        self.assertContains(response, "PHY102")
+        self.assertContains(response, "Electricity")
+        self.assertContains(response, "Core")
+        self.assertContains(response, "Elective")
+
+    def test_column_headings(self):
+        response = self.get_form()
+        self.assertContains(response, "Course Code")
+        self.assertContains(response, "Course Title")
+        self.assertContains(response, "Credit Units")
+        self.assertContains(response, "Status")
+
+    def test_total_credit_units_is_calculated(self):
+        response = self.get_form()
+        self.assertEqual(response.context["total_credit_units"], 5)
+        self.assertContains(response, "Total Credit Units")
+
+    def test_all_three_signature_labels(self):
+        response = self.get_form()
+        self.assertContains(response, "Student's Signature")
+        self.assertContains(response, "Level Adviser's Signature")
+        self.assertContains(response, "Faculty Officer's Signature")
+
+    def test_no_approval_status_on_the_page(self):
+        response = self.get_form()
+        self.assertNotContains(response, "Approved")
+        self.assertNotContains(response, "Approval")
+
+    def test_redirects_when_no_student_in_session(self):
+        self.client.session.flush()
+        response = self.get_form()
+        self.assertRedirects(response, reverse("students:home"))
+
+    def test_student_b_cannot_see_student_a_form(self):
+        other = Student.objects.create(
+            name="Bola Ade", level=100, matric_no="U20PH9999"
+        )
+        session = self.client.session
+        session["student_id"] = other.pk
+        session.save()
+
+        response = self.get_form()
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Bola Ade")
+        self.assertContains(response, "U20PH9999")
+        self.assertNotContains(response, "Amina Bello")
+        self.assertNotContains(response, "U20PH1234")
+        self.assertNotContains(response, "PHY101")
