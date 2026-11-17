@@ -86,13 +86,6 @@
           </tr>
         {% endfor %}
       </tbody>
-      <tfoot>
-        <tr>
-          <th scope="row" colspan="2">Total credit units</th>
-          <th class="text-end">{{ total_credit_units }}</th>
-          <td colspan="2"></td>
-        </tr>
-      </tfoot>
     </table>
   </div>
 
@@ -122,7 +115,10 @@
         </form>
       </div>
     {% endfor %}
-    <p class="fw-semibold text-end mb-0">Total credit units: {{ total_credit_units }}</p>
+  </div>
+
+  <div class="total-chip-row">
+    <span class="total-chip">Total: {{ total_credit_units }} unit{{ total_credit_units|pluralize }}</span>
   </div>
 {% else %}
   <div class="empty-state">

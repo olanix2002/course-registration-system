@@ -36,7 +36,7 @@ ALLOWED_HOSTS = env_list("ALLOWED_HOSTS")
 CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS")
 
 # Printed on the student course registration form.
-INSTITUTION_NAME = os.environ.get("INSTITUTION_NAME", "Sample University")
+INSTITUTION_NAME = os.environ.get("INSTITUTION_NAME", "SchoolTry")
 
 INSTALLED_APPS = [
     "django.contrib.admin",

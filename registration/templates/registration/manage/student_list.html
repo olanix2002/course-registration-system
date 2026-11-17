@@ -35,7 +35,7 @@
 </div>
 
 {% if students %}
-  <div class="table-responsive">
+  <div class="table-responsive staff-table-wrap">
     <table class="table table-courses align-middle">
       <caption class="visually-hidden">Registered students</caption>
       <thead>
@@ -63,6 +63,27 @@
         {% endfor %}
       </tbody>
     </table>
+  </div>
+
+  <!-- Narrow screens: stacked cards -->
+  <div class="staff-cards">
+    {% for student in students %}
+      <div class="staff-card">
+        <div class="staff-card-head">
+          <span class="staff-card-title">{{ student.name }}</span>
+          <span class="badge badge-neutral">{{ student.course_count }} course{{ student.course_count|pluralize }}</span>
+        </div>
+        <dl class="staff-card-meta">
+          <dt>Level</dt><dd>{{ student.get_level_display }}</dd>
+          <dt>Matric number</dt><dd>{{ student.matric_no|default:"N/A" }}</dd>
+        </dl>
+        <div class="staff-card-actions">
+          <a class="btn btn-sm btn-outline-secondary" href="{% url 'registration:student_detail' student.pk %}">
+            <i class="bi bi-eye me-1" aria-hidden="true"></i>View courses
+          </a>
+        </div>
+      </div>
+    {% endfor %}
   </div>
 {% else %}
   <div class="empty-state">

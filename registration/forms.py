@@ -7,6 +7,13 @@ from .models import Course, Level, Student, normalise_name
 class StaffLoginForm(AuthenticationForm):
     """The standard Django login form, styled with Bootstrap classes."""
 
+    # One short line, whatever the underlying reason was. Django uses the
+    # same message for an unknown user and a bad password on purpose.
+    error_messages = {
+        "invalid_login": "Incorrect username or password.",
+        "inactive": "Incorrect username or password.",
+    }
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["username"].widget.attrs.update(

@@ -33,7 +33,7 @@
 </div>
 
 {% if courses %}
-  <div class="table-responsive">
+  <div class="table-responsive staff-table-wrap">
     <table class="table table-courses align-middle">
       <caption class="visually-hidden">All courses</caption>
       <thead>
@@ -92,6 +92,53 @@
         {% endfor %}
       </tbody>
     </table>
+  </div>
+
+  <!-- Narrow screens: stacked cards -->
+  <div class="staff-cards">
+    {% for course in courses %}
+      <div class="staff-card">
+        <div class="staff-card-head">
+          <span class="staff-card-title">{{ course.code }}</span>
+          {% if course.is_active %}
+            <span class="badge badge-active">Active</span>
+          {% else %}
+            <span class="badge badge-inactive">Inactive</span>
+          {% endif %}
+        </div>
+        <p class="mb-2">{{ course.title }}</p>
+        <dl class="staff-card-meta">
+          <dt>Level</dt><dd>{{ course.get_level_display }}</dd>
+          <dt>Units</dt><dd>{{ course.credit_units }}</dd>
+          <dt>Type</dt>
+          <dd>
+            {% if course.course_type == "Core" %}
+              <span class="badge badge-core">Core</span>
+            {% else %}
+              <span class="badge badge-elective">Elective</span>
+            {% endif %}
+          </dd>
+        </dl>
+        <div class="staff-card-actions">
+          <a class="btn btn-sm btn-outline-secondary" href="{% url 'registration:course_edit' course.pk %}">
+            <i class="bi bi-pencil me-1" aria-hidden="true"></i>Edit
+          </a>
+          <form method="post" action="{% url 'registration:course_toggle_active' course.pk %}" class="mb-0">
+            {% csrf_token %}
+            <input type="hidden" name="level" value="{{ selected_level }}">
+            {% if course.is_active %}
+              <button type="submit" class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-pause-circle me-1" aria-hidden="true"></i>Deactivate
+              </button>
+            {% else %}
+              <button type="submit" class="btn btn-sm btn-outline-success">
+                <i class="bi bi-play-circle me-1" aria-hidden="true"></i>Activate
+              </button>
+            {% endif %}
+          </form>
+        </div>
+      </div>
+    {% endfor %}
   </div>
 {% else %}
   <div class="empty-state">

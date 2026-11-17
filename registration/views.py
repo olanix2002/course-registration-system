@@ -266,7 +266,9 @@ def student_course_selection(request):
         "selected_ids": selected_ids,
         "total_credit_units": total_credit_units,
         "max_credit_units": MAX_CREDIT_UNITS,
-        # Width of the progress bar server side; the script updates it live.
+        # Initial values. They match what the script computes from the ticked
+        # boxes, so the page does not flicker on load.
+        "selected_count": len(selected_ids),
         "credit_percent": min(
             100, round(total_credit_units / MAX_CREDIT_UNITS * 100)
         ),

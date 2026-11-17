@@ -1,3 +1,4 @@
+import re
 from io import StringIO
 
 from django.conf import settings
@@ -340,6 +341,53 @@ class SelectiveSaveTests(TestCase):
         response = self.select(big[0], big[1])
         self.assertRedirects(response, reverse("students:my_courses"))
         self.assertEqual(self.registered_codes(), ["CAP0", "CAP1"])
+
+    def test_select_page_renders_one_checkbox_per_course(self):
+        # Regression: the page once rendered a table row plus a mobile card,
+        # which put two boxes per course on the page and doubled the total.
+        self.select(self.course_a, self.course_b)
+
+        response = self.client.get(reverse("students:course_selection"))
+        html = response.content.decode()
+
+        ids = re.findall(r'name="courses"[^>]*?id="([^"]+)"', html)
+        values = re.findall(r'<input[^>]*?name="courses"[^>]*?value="(\d+)"', html)
+
+        self.assertEqual(len(values), len(set(values)), values)
+        self.assertEqual(len(ids), len(set(ids)), ids)
+        self.assertEqual(len(values), 3)  # the three active 100 level courses
+
+        # One label per input, and no duplicate or stale ids.
+        for course in response.context["courses"]:
+            self.assertEqual(values.count(str(course.pk)), 1)
+            self.assertIn(f'id="course-{course.pk}"', html)
+            self.assertIn(f'for="course-{course.pk}"', html)
+            self.assertNotIn(f"course-card-{course.pk}", html)
+
+    def test_initial_summary_matches_the_ticked_units(self):
+        three = Course.objects.create(
+            code="MTH201", title="Maths", level=100, credit_units=5
+        )
+        self.select(self.course_a, self.course_b, three)
+
+        response = self.client.get(reverse("students:course_selection"))
+        html = response.content.decode()
+
+        ticked = re.findall(r'data-credit-units="(\d+)"[^>]*?checked', html)
+        ticked_total = sum(int(value) for value in ticked)
+
+        self.assertEqual(response.context["total_credit_units"], 3 + 2 + 5)
+        self.assertEqual(len(ticked), 3)
+        self.assertEqual(ticked_total, 10)
+        self.assertEqual(response.context["selected_count"], 3)
+        self.assertEqual(response.context["credit_percent"], 42)  # round(41.7)
+
+        # Every output hook is present and carries the same initial number.
+        self.assertEqual(html.count("data-credit-total-output"), 2)
+        for value in re.findall(
+            r"<span data-credit-total-output>(\d+)</span>", html
+        ):
+            self.assertEqual(int(value), 10)
 
     def test_failed_save_rolls_back_the_whole_selection(self):
         # Start from A + B. A submit that would exceed the cap must leave

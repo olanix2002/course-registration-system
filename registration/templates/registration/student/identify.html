@@ -3,62 +3,54 @@
 {% block title %}Course Registration{% endblock %}
 
 {% block content %}
-<div class="auth-card">
-  <div class="card">
-    <div class="card-body p-4 p-md-5">
-      <div class="text-center mb-4">
-        <i class="bi bi-mortarboard-fill fs-2 text-primary" aria-hidden="true"></i>
-        <h1 class="card-title mt-2 mb-1">Course Registration</h1>
-        <p class="text-muted mb-0">{{ INSTITUTION_NAME }}</p>
+<div class="center-page">
+  <div class="auth-card">
+    <div class="card">
+      <div class="card-body">
+        <div class="text-center mb-3">
+          <i class="bi bi-mortarboard-fill auth-icon text-primary" aria-hidden="true"></i>
+          <h1 class="auth-heading mt-2 mb-1">Course Registration</h1>
+          <p class="text-muted small mb-0">{{ INSTITUTION_NAME }}</p>
+        </div>
+
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger auth-alert" role="alert">
+            Please check the details and try again.
+          </div>
+        {% endif %}
+
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          <div class="mb-2">
+            <label for="{{ form.name.id_for_label }}" class="form-label">{{ form.name.label }}</label>
+            {{ form.name }}
+            {% for error in form.name.errors %}
+              <div class="invalid-feedback d-block">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="mb-2">
+            <label for="{{ form.level.id_for_label }}" class="form-label">{{ form.level.label }}</label>
+            {{ form.level }}
+            {% for error in form.level.errors %}
+              <div class="invalid-feedback d-block">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="mb-3">
+            <label for="{{ form.matric_no.id_for_label }}" class="form-label">
+              {{ form.matric_no.label }} <span class="text-muted fw-normal">(optional)</span>
+            </label>
+            {{ form.matric_no }}
+            {% for error in form.matric_no.errors %}
+              <div class="invalid-feedback d-block">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100">Continue</button>
+        </form>
       </div>
-
-      <p class="text-muted mb-4">
-        Enter your name and level to begin. Use the same name and level each time,
-        so we find the courses you already registered for.
-      </p>
-
-      {% if form.non_field_errors %}
-        <div class="alert alert-danger" role="alert">
-          {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
-        </div>
-      {% endif %}
-
-      <form method="post" novalidate>
-        {% csrf_token %}
-
-        <div class="mb-3">
-          <label for="{{ form.name.id_for_label }}" class="form-label">{{ form.name.label }}</label>
-          {{ form.name }}
-          {% if form.name.help_text %}<div class="form-text">{{ form.name.help_text }}</div>{% endif %}
-          <div class="form-text">Type your name exactly as you will use it next time.</div>
-          {% for error in form.name.errors %}
-            <div class="invalid-feedback d-block">{{ error }}</div>
-          {% endfor %}
-        </div>
-
-        <div class="mb-3">
-          <label for="{{ form.level.id_for_label }}" class="form-label">{{ form.level.label }}</label>
-          {{ form.level }}
-          {% for error in form.level.errors %}
-            <div class="invalid-feedback d-block">{{ error }}</div>
-          {% endfor %}
-        </div>
-
-        <div class="mb-4">
-          <label for="{{ form.matric_no.id_for_label }}" class="form-label">
-            {{ form.matric_no.label }} <span class="text-muted fw-normal">(optional)</span>
-          </label>
-          {{ form.matric_no }}
-          <div class="form-text">Add it now if you have one, so it appears on your printed form.</div>
-          {% for error in form.matric_no.errors %}
-            <div class="invalid-feedback d-block">{{ error }}</div>
-          {% endfor %}
-        </div>
-
-        <button type="submit" class="btn btn-primary w-100">
-          Continue<i class="bi bi-arrow-right ms-1" aria-hidden="true"></i>
-        </button>
-      </form>
     </div>
   </div>
 </div>

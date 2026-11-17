@@ -14,6 +14,9 @@
   --app-danger: #b3261e;
   --app-radius: 0.75rem;
   --app-shadow: 0 1px 2px rgba(18, 34, 74, 0.06), 0 6px 18px rgba(18, 34, 74, 0.06);
+  /* Height of the sticky header. The navbar is pinned to this height so the
+     value stays true, and anything that must clear the header uses it. */
+  --app-header: 3.75rem;
 
   --bs-primary: #12224a;
   --bs-primary-rgb: 18, 34, 74;
@@ -48,6 +51,16 @@ h1, h2, h3, h4, h5, h6 {
   width: 100%;
   max-width: 72rem;
   padding-bottom: 5rem;
+  min-width: 0;
+}
+
+/* Grid and flex children default to min-width:auto, which lets a wide table
+   push the page sideways instead of scrolling inside its wrapper. */
+.row {
+  --bs-gutter-x: 1.5rem;
+}
+.row > * {
+  min-width: 0;
 }
 
 .skip-link {
@@ -85,8 +98,17 @@ button:focus-visible {
   box-shadow: 0 0 0 0.2rem rgba(59, 107, 214, 0.25);
 }
 
-/* Navbar */
+/* Navbar. Pinned to the top on every page and every width. Nothing between
+   body and the navbar sets overflow, so sticky is not broken by an ancestor. */
+html {
+  scroll-padding-top: calc(var(--app-header) + 0.5rem);
+}
+
 .app-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 1040;
+  min-height: var(--app-header);
   background-color: var(--app-navy);
   padding-top: 0.5rem;
   padding-bottom: 0.5rem;
@@ -129,6 +151,17 @@ button:focus-visible {
   justify-content: center;
 }
 
+/* Open mobile menu: stays inside the sticky header and scrolls on its own if
+   it is taller than the space below the header. The navbar itself is not
+   inside this element, so stickiness is unaffected. */
+@media (max-width: 991.98px) {
+  .app-navbar .navbar-collapse {
+    max-height: calc(100vh - var(--app-header));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
 .user-chip {
   display: inline-flex;
   align-items: center;
@@ -168,10 +201,58 @@ button:focus-visible {
   padding: 1rem 1.25rem;
 }
 
+/* Sign-in pages: vertically centred, compact enough to fit without scrolling
+   at 1366x768 and 1280x720, and fluid on a 375px phone. */
+.center-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 6rem);
+  padding: 1rem 0;
+}
+
 .auth-card {
-  max-width: 30rem;
-  margin-left: auto;
-  margin-right: auto;
+  width: 100%;
+  max-width: 26rem;
+  margin: 0 auto;
+}
+
+.auth-card .card-body {
+  padding: 1.5rem;
+}
+
+.auth-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.auth-heading {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+/* One line, never wrapping onto three. */
+.auth-alert {
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  line-height: 1.3;
+}
+
+.auth-card .form-label {
+  margin-bottom: 0.15rem;
+  font-size: 0.85rem;
+}
+
+.auth-card .form-control,
+.auth-card .form-select {
+  min-height: 40px;
+}
+
+.auth-card .invalid-feedback {
+  margin-top: 0.15rem;
 }
 
 .card-title {
@@ -210,6 +291,15 @@ button:focus-visible {
   min-height: 44px;
   padding-left: 0.85rem;
   padding-right: 0.85rem;
+}
+
+/* Inside a data table the small buttons may be shorter, so the rows stay
+   dense. The 44px touch target still applies on the stacked mobile cards,
+   which do not sit in a table. */
+.table-courses .btn-sm {
+  min-height: 2rem;
+  padding-top: 0.2rem;
+  padding-bottom: 0.2rem;
 }
 .btn-primary {
   --bs-btn-bg: var(--app-navy);
@@ -271,13 +361,24 @@ button:focus-visible {
   margin-bottom: 1.25rem;
 }
 
-/* Tables */
+/* Tables. No overflow property is set here on purpose.
+
+   Setting overflow-x alone creates a scroll container in the other axis too:
+   per CSS, a visible value for the other axis computes to auto. That gave a
+   nested vertical scrollbar inside every wrapper. Without any overflow the
+   wrapper is never a scroll container, only the page scrolls, and
+   border-radius clips the corners because there is no scroll box to escape. */
 .table-responsive {
   border: 1px solid var(--app-line);
   border-radius: var(--app-radius);
   background-color: #fff;
   box-shadow: var(--app-shadow);
-  overflow-x: auto;
+  max-width: 100%;
+  min-width: 0;
+}
+.table-responsive > table {
+  margin-bottom: 0;
+  width: 100%;
 }
 .table-courses,
 .app-table {
@@ -301,7 +402,13 @@ button:focus-visible {
 .app-table td,
 .app-table th {
   vertical-align: middle;
-  padding: 0.8rem 1rem;
+  padding: 0.6rem 0.85rem;
+}
+.table-courses tbody td {
+  font-size: 0.9rem;
+}
+.table-courses thead th {
+  padding: 0.7rem 0.85rem;
 }
 .table-courses tbody tr:last-child td,
 .app-table tbody tr:last-child td {
@@ -328,9 +435,67 @@ button:focus-visible {
   border-color: var(--app-navy);
 }
 
-/* Selected row highlight on the selection table. */
-.course-row:has(.course-check:checked) {
+/* Course selection list. One input per course, laid out as a grid row on
+   wide screens and as a stacked card under 768px. No duplicate markup. */
+.course-list-head,
+.course-item {
+  display: grid;
+  grid-template-columns: 2.5rem minmax(5.5rem, 7rem) minmax(0, 1fr) 4.5rem 6.5rem;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.8rem 1rem;
+}
+
+.course-list-head {
+  background-color: var(--app-navy-tint);
+  color: var(--app-navy);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-radius: var(--app-radius) var(--app-radius) 0 0;
+}
+
+.course-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.course-item {
+  border-top: 1px solid var(--app-line);
+}
+
+.course-item.is-selected {
   background-color: #f0f4fc;
+}
+
+.course-item-check {
+  display: flex;
+  align-items: center;
+}
+
+.course-item-code {
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.course-item-title {
+  overflow-wrap: anywhere;
+}
+
+/* On wide screens the wrapper disappears so units and the badge become
+   grid items in their own columns. */
+.course-item-meta {
+  display: contents;
+}
+
+.course-item-units {
+  text-align: right;
+}
+
+.course-list-units {
+  text-align: right;
 }
 
 /* Badges */
@@ -390,11 +555,11 @@ button:focus-visible {
   color: #8d1d16;
 }
 
-/* Student summary card */
+/* Student summary card, used on My courses and the staff student page. */
 .summary-card .summary-row {
   display: grid;
   gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
   margin-bottom: 1.25rem;
 }
 .summary-item .summary-label {
@@ -410,6 +575,70 @@ button:focus-visible {
   font-weight: 600;
   overflow-wrap: anywhere;
 }
+
+/* Right-hand selection panel on Select courses. */
+.summary-panel {
+  min-width: 0;
+}
+.summary-heading {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.85rem;
+}
+.summary-list {
+  margin: 0;
+}
+.summary-line {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr);
+  gap: 0.5rem;
+  padding: 0.3rem 0;
+  font-size: 0.9rem;
+}
+.summary-line dt {
+  font-weight: 500;
+  color: var(--app-muted);
+}
+.summary-line dd {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.summary-divider {
+  border-top: 1px solid var(--app-line);
+  margin: 0.85rem 0;
+}
+.summary-count {
+  font-size: 0.85rem;
+  color: var(--app-muted);
+}
+.summary-count span[data-credit-count-output] {
+  font-weight: 700;
+  color: var(--app-ink);
+}
+.summary-warning {
+  margin-top: 0.85rem;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+/* Compact total chip shown under a table. */
+.total-chip-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.75rem;
+}
+.total-chip {
+  display: inline-block;
+  background-color: var(--app-navy-tint);
+  color: var(--app-navy);
+  border-radius: 999px;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
 .credit-progress {
   height: 0.6rem;
   border-radius: 999px;
@@ -479,28 +708,9 @@ button:focus-visible {
   color: var(--app-muted);
 }
 
-/* Sticky save bar */
-.save-bar {
-  position: sticky;
-  bottom: 0;
-  z-index: 1030;
-  background-color: #fff;
-  border: 1px solid var(--app-line);
-  border-radius: var(--app-radius);
-  box-shadow: 0 -2px 16px rgba(18, 34, 74, 0.1);
-  padding: 0.85rem 1.25rem;
-  margin-top: 1.25rem;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  align-items: center;
-  justify-content: space-between;
-}
-.save-bar .save-total {
-  font-weight: 600;
-}
-.save-bar .save-total .over-text {
-  color: var(--app-danger);
+/* Slim sticky save bar, shown below the lg breakpoint only. */
+.mini-save-bar {
+  display: none;
 }
 
 /* Empty states */
@@ -526,7 +736,76 @@ button:focus-visible {
   margin-bottom: 1rem;
 }
 
-/* Mobile: swap the table for stacked cards. */
+/* Staff tables become stacked cards under 768px. */
+.staff-cards {
+  display: none;
+}
+.staff-card {
+  background-color: #fff;
+  border: 1px solid var(--app-line);
+  border-radius: var(--app-radius);
+  box-shadow: var(--app-shadow);
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+}
+.staff-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+.staff-card-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
+}
+.staff-card-meta {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  gap: 0.35rem 0.5rem;
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+.staff-card-meta dt {
+  color: var(--app-muted);
+  font-weight: 500;
+}
+.staff-card-meta dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.staff-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.staff-card-actions .btn {
+  flex: 1 1 auto;
+}
+
+/* Staff tables carry seven and five columns and can outgrow a tablet. Only
+   between 768px and 991px is a sideways scroll needed, because under 768px
+   the same data is shown as cards. Wide screens fit, so they get no scroll
+   container at all. */
+@media (min-width: 768px) and (max-width: 991.98px) {
+  .table-responsive.staff-table-wrap {
+    overflow-x: auto;
+  }
+}
+
+/* One column for toolbars on narrow screens. */
+.toolbar .row > [class*="col-"] {
+  min-width: 0;
+}
+.toolbar .btn {
+  width: 100%;
+}
+.toolbar .form-control,
+.toolbar .form-select {
+  width: 100%;
+}
+
 @media (max-width: 767.98px) {
   .page-heading h1 {
     font-size: 1.3rem;
@@ -537,13 +816,112 @@ button:focus-visible {
   .course-cards {
     display: block;
   }
-  .save-bar {
-    flex-direction: column;
-    align-items: stretch;
-    text-align: center;
+
+  /* The selection list becomes stacked cards. */
+  .course-list-head {
+    display: none;
   }
-  .save-bar .btn {
-    width: 100%;
+  .course-list {
+    padding: 0.75rem;
+  }
+  .course-item {
+    display: block;
+    position: relative;
+    padding: 1rem 1rem 1rem 3rem;
+    margin-bottom: 0.75rem;
+    background-color: #fff;
+    border: 1px solid var(--app-line);
+    border-radius: var(--app-radius);
+    box-shadow: var(--app-shadow);
+  }
+  .course-item:last-child {
+    margin-bottom: 0;
+  }
+  .course-item.is-selected {
+    border-color: var(--app-navy-soft);
+  }
+  .course-item-check {
+    position: absolute;
+    left: 1rem;
+    top: 1rem;
+  }
+  .course-item-code {
+    display: block;
+    font-size: 0.95rem;
+  }
+  .course-item-title {
+    display: block;
+    margin: 0.15rem 0 0.5rem;
+    font-size: 0.95rem;
+  }
+  .course-item-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    font-size: 0.85rem;
+    color: var(--app-muted);
+  }
+  .course-item-units {
+    text-align: left;
+  }
+  .course-item-units::after {
+    content: " units";
+  }
+  .table-responsive.staff-table-wrap {
+    display: none;
+  }
+  .staff-cards {
+    display: block;
+  }
+  .toolbar {
+    padding: 1rem;
+  }
+  .total-chip-row {
+    justify-content: flex-start;
+  }
+}
+
+/* Below lg the summary sits above the list and a slim bar does the saving. */
+@media (max-width: 991.98px) {
+  .mini-save-bar {
+    display: flex;
+    position: sticky;
+    bottom: 0;
+    z-index: 1030;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    padding: 0.5rem 0.75rem;
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+    background-color: #fff;
+    border: 1px solid var(--app-line);
+    border-radius: var(--app-radius);
+    box-shadow: 0 -2px 14px rgba(18, 34, 74, 0.12);
+  }
+  .mini-save-bar .mini-total {
+    font-size: 0.9rem;
+    white-space: nowrap;
+  }
+  .mini-save-bar .btn {
+    min-height: 40px;
+  }
+  /* Room for the bar so it never hides the last course. */
+  .select-layout {
+    padding-bottom: 4.5rem;
+  }
+}
+
+@media (min-width: 992px) {
+  /* Sticky summary on the right; the page itself scrolls. It clears the
+     sticky header by the header height plus a gap. */
+  .summary-panel {
+    position: sticky;
+    top: calc(var(--app-header) + 1rem);
+  }
+  .select-layout {
+    align-items: flex-start;
   }
 }
 
@@ -593,6 +971,70 @@ button:focus-visible {
 .signature-caption {
   font-size: 0.8rem;
   color: #495057;
+}
+
+/* On-screen preview on a phone. Screen only, so the print rules and the
+   desktop layout are untouched. The table was overflowing its paper card
+   because the shared table style sets white-space: nowrap on header cells. */
+@media screen and (max-width: 575.98px) {
+  .print-form {
+    width: 100%;
+    max-width: 100%;
+    padding: 1rem;
+  }
+
+  .print-table {
+    width: 100%;
+    table-layout: fixed;
+    font-size: 0.8rem;
+  }
+
+  .print-table tbody td {
+    padding: 0.35rem 0.3rem;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  /* Header cells wrap only between words, never inside one, so "CREDIT"
+     and "UNITS" stay whole. */
+  .print-table thead th {
+    padding: 0.35rem 0.3rem;
+    white-space: normal;
+    overflow-wrap: normal;
+    word-break: normal;
+    -webkit-hyphens: none;
+    hyphens: none;
+  }
+
+  /* Code 22%, title 36%, units 24%, status 18%. The units column is widened
+     so "CREDIT" and "UNITS" each fit on their own line. */
+  .print-table thead th:nth-child(1),
+  .print-table tbody td:nth-child(1) {
+    width: 22%;
+  }
+  .print-table thead th:nth-child(2),
+  .print-table tbody td:nth-child(2) {
+    width: 36%;
+  }
+  .print-table thead th:nth-child(3),
+  .print-table tbody td:nth-child(3) {
+    width: 24%;
+  }
+  .print-table thead th:nth-child(4),
+  .print-table tbody td:nth-child(4) {
+    width: 18%;
+  }
+
+  /* Signature line and date line each take the full width. */
+  .signature-row .row > [class*="col-"] {
+    flex: 0 0 100%;
+    width: 100%;
+    max-width: 100%;
+  }
+  .signature-row .row > [class*="col-"] + [class*="col-"] {
+    margin-top: 1rem;
+  }
 }
 
 @page {
