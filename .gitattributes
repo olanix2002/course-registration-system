@@ -1,0 +1,6 @@
+# Shell scripts run on Render's Linux builder, which rejects CRLF line endings.
+*.sh text eol=lf
+build.sh text eol=lf
+
+# Keep the Python pin readable everywhere.
+.python-version text eol=lf

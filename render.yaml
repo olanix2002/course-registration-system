@@ -1,0 +1,26 @@
+# Render Blueprint. Creating a Blueprint from this file sets the build and
+# start commands for you. The values marked sync: false are entered by hand in
+# the Render dashboard, so no secret is stored in this repository.
+services:
+  - type: web
+    name: course-registration
+    runtime: python
+    plan: free
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120"
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: INSTITUTION_NAME
+        value: "SchoolTry"
+      - key: DATABASE_URL
+        sync: false
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
