@@ -102,8 +102,10 @@
 
 </div>
 
-<div class="mt-4 d-print-none">
-  <button type="button" class="btn btn-primary" onclick="window.print()">Print this form</button>
+<div class="mt-4 d-print-none text-center">
+  <button type="button" class="btn btn-primary" onclick="window.print()">
+    <i class="bi bi-printer me-1" aria-hidden="true"></i>Print this form
+  </button>
   <a class="btn btn-outline-secondary" href="{% url 'students:my_courses' %}">Back to my courses</a>
 </div>
 {% endblock %}

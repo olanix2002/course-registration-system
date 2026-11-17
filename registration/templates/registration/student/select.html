@@ -4,96 +4,160 @@
 {% block title %}Select courses{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center page-heading">
-    <h1 class="h3 mb-0">Select courses</h1>
-    <a class="btn btn-outline-secondary d-print-none" href="{% url 'students:my_courses' %}">My courses</a>
+<div class="page-heading">
+  <h1>Select courses</h1>
+  <a class="btn btn-outline-secondary" href="{% url 'students:my_courses' %}">
+    <i class="bi bi-list-check me-1" aria-hidden="true"></i>My courses
+  </a>
 </div>
 
-<p class="text-muted">
-    {{ student.name }} &middot; {{ student.get_level_display }}.
-    Only active {{ student.get_level_display|lower }} courses are listed.
-</p>
+<div class="card summary-card mb-4">
+  <div class="card-body">
+    <div class="summary-row">
+      <div class="summary-item">
+        <span class="summary-label">Student</span>
+        <span class="summary-value">{{ student.name }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Level</span>
+        <span class="summary-value">{{ student.get_level_display }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Matric number</span>
+        <span class="summary-value">{{ student.matric_no|default:"N/A" }}</span>
+      </div>
+    </div>
+
+    <div class="credit-meter-label">
+      <span>Credit units used</span>
+      <span><strong data-credit-total-output>{{ total_credit_units }}</strong> of {{ max_credit_units }}</span>
+    </div>
+    <div class="progress credit-progress" role="progressbar"
+         data-credit-progress
+         aria-label="Credit units used"
+         aria-valuemin="0" aria-valuemax="{{ max_credit_units }}"
+         aria-valuenow="{{ total_credit_units }}">
+      <div class="progress-bar" data-credit-progress-bar style="width: {{ credit_percent }}%"></div>
+    </div>
+  </div>
+</div>
 
 {% if error %}
-    <div class="alert alert-danger">{{ error }}</div>
+  <div class="alert alert-danger" role="alert">
+    <i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i>{{ error }}
+  </div>
 {% endif %}
 
 {% if courses %}
-    <form method="post" data-credit-total data-max-units="{{ max_credit_units }}">
-        {% csrf_token %}
+  <form method="post" data-credit-total data-max-units="{{ max_credit_units }}">
+    {% csrf_token %}
 
-        <div class="table-responsive">
-            <table class="table table-striped table-courses align-middle">
-                <thead>
-                    <tr>
-                        <th scope="col" class="check-column"></th>
-                        <th scope="col">Code</th>
-                        <th scope="col">Title</th>
-                        <th scope="col" class="text-end">Units</th>
-                        <th scope="col">Type</th>
-                        <th scope="col">Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for course in courses %}
-                        <tr>
-                            <td class="check-column">
-                                <input type="checkbox"
-                                       class="form-check-input"
-                                       name="courses"
-                                       value="{{ course.pk }}"
-                                       id="course-{{ course.pk }}"
-                                       data-credit-units="{{ course.credit_units }}"
-                                       {% if course.pk in registered_ids %}checked disabled{% elif course.pk in selected_ids %}checked{% endif %}>
-                            </td>
-                            <td class="fw-semibold">
-                                <label class="form-check-label mb-0" for="course-{{ course.pk }}">{{ course.code }}</label>
-                            </td>
-                            <td>{{ course.title }}</td>
-                            <td class="text-end">{{ course.credit_units }}</td>
-                            <td>{{ course.get_course_type_display }}</td>
-                            <td>
-                                {% if course.pk in registered_ids %}
-                                    <span class="badge text-bg-success">Registered</span>
-                                {% else %}
-                                    <span class="badge text-bg-light">Available</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+    <p class="text-muted small mb-3">
+      Tick every course you are taking this session, then save. Unticking a course removes it.
+      Only active {{ student.get_level_display|lower }} courses are listed.
+    </p>
 
-        <div class="d-flex justify-content-between align-items-center credit-total-bar">
-            <div>
-                <span class="text-muted">Running total:</span>
-                <strong><span data-credit-total-output>{{ total_credit_units }}</span> credit units</strong>
-                <span class="text-muted">of {{ max_credit_units }} allowed</span>
-            </div>
-            <button type="submit" class="btn btn-primary">Save registration</button>
-        </div>
-
-        <div class="alert alert-warning mt-3" data-credit-total-warning hidden>
-            That is more than the {{ max_credit_units }} credit units allowed.
-            Untick a course before saving.
-        </div>
-
-        <p class="text-muted small mt-3">
-            Courses marked <span class="badge text-bg-success">Registered</span> are already
-            on your registration. Remove them from
-            <a href="{% url 'students:my_courses' %}">My courses</a>.
-        </p>
-    </form>
-{% else %}
-    <div class="alert alert-info">
-        No active courses are available at {{ student.get_level_display|lower }} level yet.
+    <!-- Wide screens: table -->
+    <div class="table-responsive course-table-wrap">
+      <table class="table table-courses align-middle">
+        <caption class="visually-hidden">Courses available at {{ student.get_level_display }}</caption>
+        <thead>
+          <tr>
+            <th scope="col" class="check-column"><span class="visually-hidden">Select</span></th>
+            <th scope="col">Code</th>
+            <th scope="col">Title</th>
+            <th scope="col" class="text-end">Units</th>
+            <th scope="col">Type</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for course in courses %}
+            <tr class="course-row">
+              <td class="check-column">
+                <input type="checkbox"
+                       class="form-check-input course-check"
+                       name="courses"
+                       value="{{ course.pk }}"
+                       id="course-{{ course.pk }}"
+                       data-credit-units="{{ course.credit_units }}"
+                       {% if course.pk in selected_ids %}checked{% endif %}>
+              </td>
+              <td>
+                <label class="fw-semibold mb-0" for="course-{{ course.pk }}">{{ course.code }}</label>
+              </td>
+              <td>{{ course.title }}</td>
+              <td class="text-end">{{ course.credit_units }}</td>
+              <td>
+                {% if course.course_type == "Core" %}
+                  <span class="badge badge-core">Core</span>
+                {% else %}
+                  <span class="badge badge-elective">Elective</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
+
+    <!-- Narrow screens: stacked cards -->
+    <div class="course-cards">
+      {% for course in courses %}
+        <div class="course-card{% if course.pk in selected_ids %} is-selected{% endif %}">
+          <div class="form-check mb-0">
+            <input type="checkbox"
+                   class="form-check-input course-check"
+                   name="courses"
+                   value="{{ course.pk }}"
+                   id="course-card-{{ course.pk }}"
+                   data-credit-units="{{ course.credit_units }}"
+                   {% if course.pk in selected_ids %}checked{% endif %}>
+            <label class="visually-hidden" for="course-card-{{ course.pk }}">{{ course.code }}</label>
+          </div>
+          <div class="course-card-body">
+            <span class="course-card-code">{{ course.code }}</span>
+            <label class="course-card-title" for="course-card-{{ course.pk }}">{{ course.title }}</label>
+            <div class="course-card-meta">
+              <span>{{ course.credit_units }} credit unit{{ course.credit_units|pluralize }}</span>
+              {% if course.course_type == "Core" %}
+                <span class="badge badge-core">Core</span>
+              {% else %}
+                <span class="badge badge-elective">Elective</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="alert alert-warning" data-credit-total-warning hidden role="alert">
+      <i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i>
+      That is more than the {{ max_credit_units }} credit units allowed. Untick a course before saving.
+    </div>
+
+    <div class="save-bar">
+      <div class="save-total">
+        Running total: <strong><span data-credit-total-output>{{ total_credit_units }}</span></strong>
+        of {{ max_credit_units }} credit units
+        <span data-credit-total-warning hidden class="over-text d-block small">Over the limit, untick a course to save.</span>
+      </div>
+      <button type="submit" class="btn btn-primary" data-save-button>
+        <i class="bi bi-check2-circle me-1" aria-hidden="true"></i>Save registration
+      </button>
+    </div>
+  </form>
+{% else %}
+  <div class="empty-state">
+    <i class="bi bi-journal-x empty-icon" aria-hidden="true"></i>
+    <h2>No courses available yet</h2>
+    <p>There are no active courses at {{ student.get_level_display|lower }} level. Check back later.</p>
+    <a class="btn btn-outline-secondary" href="{% url 'students:my_courses' %}">Go to my courses</a>
+  </div>
 {% endif %}
 {% endblock %}
 
 {% block extra_js %}
-    {% if courses %}
-        <script src="{% static 'registration/js/credit-total.js' %}"></script>
-    {% endif %}
+  {% if courses %}
+    <script src="{% static 'registration/js/credit-total.js' %}"></script>
+  {% endif %}
 {% endblock %}

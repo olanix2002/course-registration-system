@@ -225,9 +225,10 @@ class StudentCourseSelectionTests(TestCase):
         self.assertRedirects(response, reverse("students:my_courses"))
         self.assertEqual(Registration.objects.count(), 4)
 
-    def test_registering_twice_does_not_duplicate(self):
+    def test_resubmitting_the_same_selection_does_not_duplicate(self):
         self.select(self.course_a)
-        self.select(self.course_a)
+        response = self.select(self.course_a)
+        self.assertRedirects(response, reverse("students:my_courses"))
         self.assertEqual(Registration.objects.count(), 1)
 
     def test_running_total_is_shown(self):
@@ -246,15 +247,17 @@ class StudentCourseSelectionTests(TestCase):
         my_courses = self.client.get(reverse("students:my_courses"))
         self.assertEqual(my_courses.context["total_credit_units"], 3)
 
-    def test_empty_submission_is_accepted_and_registers_nothing(self):
-        # The selection page is additive, so no tick boxes means no change.
+    def test_empty_submission_removes_everything(self):
+        # Saving with nothing ticked means "take me off every course".
+        self.select(self.course_a, self.course_b)
+        self.assertEqual(Registration.objects.count(), 2)
         response = self.client.post(reverse("students:course_selection"), {})
         self.assertRedirects(response, reverse("students:my_courses"))
         self.assertEqual(Registration.objects.count(), 0)
 
 
-class AdditiveSubmissionTests(TestCase):
-    """Submitting the selection page again adds to the old selection."""
+class SelectiveSaveTests(TestCase):
+    """Saving makes the registration equal the ticked set, in one go."""
 
     def setUp(self):
         self.course_a = Course.objects.create(
@@ -262,6 +265,9 @@ class AdditiveSubmissionTests(TestCase):
         )
         self.course_b = Course.objects.create(
             code="PHY102", title="Electricity", level=100, credit_units=2
+        )
+        self.course_c = Course.objects.create(
+            code="PHY103", title="Optics", level=100, credit_units=4
         )
         self.student = Student.objects.create(name="Amina Bello", level=100)
         session = self.client.session
@@ -281,31 +287,97 @@ class AdditiveSubmissionTests(TestCase):
             )
         )
 
-    def test_second_submission_keeps_the_first_selection(self):
+    def test_unticking_removes_the_course(self):
+        self.select(self.course_a, self.course_b)
         self.select(self.course_a)
-        self.select(self.course_b)
+        self.assertEqual(self.registered_codes(), ["PHY101"])
+
+    def test_add_and_remove_in_one_save(self):
+        self.select(self.course_a, self.course_b)
+        # Untick A, keep B, tick C: all in a single submit.
+        self.select(self.course_b, self.course_c)
+        self.assertEqual(self.registered_codes(), ["PHY102", "PHY103"])
+
+    def test_saving_the_same_selection_says_no_changes(self):
+        self.select(self.course_a, self.course_b)
+        # Follow the redirect so the message stack is emptied before the retry.
+        self.client.get(reverse("students:my_courses"))
+        response = self.select(self.course_a, self.course_b)
+        self.assertRedirects(response, reverse("students:my_courses"))
+        stored = [str(message) for message in response.wsgi_request._messages]
+        self.assertEqual(stored, ["No changes to save."])
         self.assertEqual(self.registered_codes(), ["PHY101", "PHY102"])
 
-    def test_cap_counts_units_already_registered(self):
-        # 20 units already held, plus 5 more, is over the 24 unit cap.
-        held = [
+    def test_cap_applies_to_the_final_ticked_total(self):
+        # A + B are 5 units. Adding C would make 9, so tick all three plus
+        # enough heavy courses to pass 24 and the save must be refused.
+        heavy = [
             Course.objects.create(
-                code=f"HLD{index}", title="Held", level=100, credit_units=5
+                code=f"BIG{index}", title="Big", level=100, credit_units=8
             )
-            for index in range(4)
+            for index in range(3)
         ]
-        self.select(*held)
-        self.assertEqual(Registration.objects.count(), 4)
-
-        extra = Course.objects.create(
-            code="XTRA1", title="Extra", level=100, credit_units=5
-        )
-        response = self.select(extra)
-
+        response = self.select(self.course_a, self.course_b, *heavy)
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "That would bring you to 25 credit units")
-        self.assertNotIn("XTRA1", self.registered_codes())
-        self.assertEqual(Registration.objects.count(), 4)
+        self.assertContains(response, "That is 29 credit units")
+        self.assertEqual(Registration.objects.count(), 0)
+
+    def test_unticking_brings_a_selection_back_under_the_cap(self):
+        # 23 units registered is fine; dropping one leaves 21, still fine.
+        big = [
+            Course.objects.create(
+                code=f"CAP{index}", title="Cap", level=100, credit_units=8
+            )
+            for index in range(3)
+        ]
+        # 8 + 8 + 7 = 23
+        small = Course.objects.create(
+            code="SML101", title="Small", level=100, credit_units=7
+        )
+        self.select(big[0], big[1], small)
+        self.assertEqual(Registration.objects.count(), 3)
+
+        response = self.select(big[0], big[1])
+        self.assertRedirects(response, reverse("students:my_courses"))
+        self.assertEqual(self.registered_codes(), ["CAP0", "CAP1"])
+
+    def test_failed_save_rolls_back_the_whole_selection(self):
+        # Start from A + B. A submit that would exceed the cap must leave
+        # the existing rows exactly as they were, no partial add or remove.
+        self.select(self.course_a, self.course_b)
+        before = self.registered_codes()
+
+        heavy = [
+            Course.objects.create(
+                code=f"OVR{index}", title="Over", level=100, credit_units=9
+            )
+            for index in range(3)
+        ]
+        response = self.select(*heavy)
+        self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(self.registered_codes(), before)
+        self.assertEqual(Registration.objects.count(), 2)
+
+    def test_save_is_wrapped_in_a_transaction(self):
+        # If the insert inside the block fails, the delete must be undone.
+        from unittest.mock import patch
+
+        from django.db import IntegrityError
+
+        self.select(self.course_a, self.course_b)
+        before = self.registered_codes()
+
+        # Removing A and adding C, but force the insert to blow up.
+        with patch(
+            "registration.views.Registration.objects.create",
+            side_effect=IntegrityError("boom"),
+        ):
+            with self.assertRaises(IntegrityError):
+                self.select(self.course_b, self.course_c)
+
+        # A was meant to be deleted; the rollback must have kept it.
+        self.assertEqual(self.registered_codes(), before)
 
 
 class CourseModelTests(TestCase):

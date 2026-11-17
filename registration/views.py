@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.db import transaction
 from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -178,14 +179,21 @@ def student_home(request):
 
 
 def student_course_selection(request):
-    """Offer the active courses at the student's level and register the picks."""
+    """Offer the active courses at the student's level and save the ticked set.
+
+    Saving replaces the student's whole selection: newly ticked courses are
+    added, courses that were unticked are removed, and both happen in one
+    transaction so the student never ends up with a half-applied selection.
+    """
     student, response = _student_or_redirect(request)
     if response is not None:
         return response
 
     courses = list(Course.objects.filter(is_active=True, level=student.level))
     registered = _registered_courses(student)
-    selected_ids = set(registered)
+    registered_ids = set(registered)
+    offered = {course.pk for course in courses}
+    selected_ids = registered_ids
     error = None
 
     if request.method == "POST":
@@ -196,52 +204,72 @@ def student_course_selection(request):
 
         if submitted is None:
             error = "That selection could not be read. Please try again."
+        elif not submitted <= offered:
+            # Covers courses at another level and deactivated courses.
+            selected_ids = submitted
+            error = "One or more of those courses is not open to you."
         else:
             selected_ids = submitted
-            offered = {course.pk for course in courses}
-            if not submitted <= offered:
-                error = "One or more of those courses is not open to you."
-            else:
-                new_ids = submitted - set(registered)
-                total = sum(course.credit_units for course in registered.values())
-                total += sum(
-                    course.credit_units
-                    for course in courses
-                    if course.pk in new_ids
+            to_add = submitted - registered_ids
+            to_remove = registered_ids - submitted
+            total = sum(
+                course.credit_units for pk, course in registered.items()
+                if pk in submitted
+            ) + sum(
+                course.credit_units for course in courses
+                if course.pk in to_add
+            )
+
+            if total > MAX_CREDIT_UNITS:
+                error = (
+                    f"That is {total} credit units. "
+                    f"The maximum is {MAX_CREDIT_UNITS}."
                 )
-                if total > MAX_CREDIT_UNITS:
-                    error = (
-                        f"That would bring you to {total} credit units. "
-                        f"The maximum is {MAX_CREDIT_UNITS}."
-                    )
-                else:
-                    for course_id in new_ids:
-                        Registration.objects.get_or_create(
+            elif not to_add and not to_remove:
+                messages.info(request, "No changes to save.")
+                return redirect("students:my_courses")
+            else:
+                with transaction.atomic():
+                    if to_remove:
+                        Registration.objects.filter(
+                            student=student, course_id__in=to_remove
+                        ).delete()
+                    for course_id in to_add:
+                        Registration.objects.create(
                             student=student, course_id=course_id
                         )
-                    if new_ids:
-                        messages.success(
-                            request,
-                            f"{len(new_ids)} course(s) added to your registration.",
-                        )
-                    else:
-                        messages.info(request, "Your registration is unchanged.")
-                    return redirect("students:my_courses")
+                parts = []
+                if to_add:
+                    parts.append(f"{len(to_add)} added")
+                if to_remove:
+                    parts.append(f"{len(to_remove)} removed")
+                messages.success(
+                    request,
+                    "Registration saved: " + ", ".join(parts) + ".",
+                )
+                return redirect("students:my_courses")
 
-    total_credit_units = sum(course.credit_units for course in registered.values())
-    total_credit_units += sum(
+    total_credit_units = sum(
+        course.credit_units
+        for pk, course in registered.items()
+        if pk in selected_ids
+    ) + sum(
         course.credit_units
         for course in courses
-        if course.pk in selected_ids and course.pk not in registered
+        if course.pk in selected_ids and course.pk not in registered_ids
     )
 
     context = {
         "student": student,
         "courses": courses,
-        "registered_ids": set(registered),
+        "registered_ids": registered_ids,
         "selected_ids": selected_ids,
         "total_credit_units": total_credit_units,
         "max_credit_units": MAX_CREDIT_UNITS,
+        # Width of the progress bar server side; the script updates it live.
+        "credit_percent": min(
+            100, round(total_credit_units / MAX_CREDIT_UNITS * 100)
+        ),
         "error": error,
     }
     return render(request, "registration/student/select.html", context)
@@ -254,13 +282,17 @@ def student_my_courses(request):
         return response
 
     registrations = list(student.registrations.select_related("course"))
+    total_credit_units = sum(
+        registration.course.credit_units for registration in registrations
+    )
     context = {
         "student": student,
         "registrations": registrations,
-        "total_credit_units": sum(
-            registration.course.credit_units for registration in registrations
-        ),
+        "total_credit_units": total_credit_units,
         "max_credit_units": MAX_CREDIT_UNITS,
+        "credit_percent": min(
+            100, round(total_credit_units / MAX_CREDIT_UNITS * 100)
+        ),
     }
     return render(request, "registration/student/my_courses.html", context)
 

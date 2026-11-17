@@ -3,16 +3,20 @@
 {% block title %}Students{% endblock %}
 
 {% block content %}
-  <div class="page-heading">
-    <h1 class="h3 mb-0">Students</h1>
+<div class="page-heading">
+  <div>
+    <h1>Students</h1>
+    <p class="text-muted mb-0 small">Everyone who has registered through the student pages.</p>
   </div>
+</div>
 
-  <form method="get" class="row g-2 align-items-end mb-3">
-    <div class="col-sm-4">
+<div class="toolbar">
+  <form method="get" class="row g-3 align-items-end">
+    <div class="col-12 col-lg-5">
       <label for="q" class="form-label">Name</label>
       <input type="search" name="q" id="q" class="form-control" value="{{ query }}" placeholder="Search by name">
     </div>
-    <div class="col-sm-3">
+    <div class="col-12 col-sm-6 col-lg-3">
       <label for="level" class="form-label">Level</label>
       <select name="level" id="level" class="form-select">
         <option value="">All levels</option>
@@ -21,40 +25,53 @@
         {% endfor %}
       </select>
     </div>
-    <div class="col-auto">
-      <button type="submit" class="btn btn-outline-secondary">Search</button>
+    <div class="col-12 col-sm-6 col-lg-auto d-flex flex-wrap gap-2">
+      <button type="submit" class="btn btn-outline-secondary">
+        <i class="bi bi-search me-1" aria-hidden="true"></i>Search
+      </button>
       <a class="btn btn-link" href="{% url 'registration:student_list' %}">Clear</a>
     </div>
   </form>
+</div>
 
-  {% if students %}
-    <div class="table-responsive">
-      <table class="table table-striped align-middle">
-        <thead>
+{% if students %}
+  <div class="table-responsive">
+    <table class="table table-courses align-middle">
+      <caption class="visually-hidden">Registered students</caption>
+      <thead>
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col">Level</th>
+          <th scope="col">Matric number</th>
+          <th scope="col" class="text-end">Courses</th>
+          <th scope="col" class="text-end"><span class="visually-hidden">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for student in students %}
           <tr>
-            <th scope="col">Name</th>
-            <th scope="col">Level</th>
-            <th scope="col">Matric number</th>
-            <th scope="col" class="text-end">Courses</th>
-            <th scope="col" class="text-end">Actions</th>
+            <td class="fw-semibold">{{ student.name }}</td>
+            <td class="text-nowrap">{{ student.get_level_display }}</td>
+            <td>{{ student.matric_no|default:"N/A" }}</td>
+            <td class="text-end">{{ student.course_count }}</td>
+            <td class="text-end">
+              <a class="btn btn-sm btn-outline-secondary" href="{% url 'registration:student_detail' student.pk %}">
+                <i class="bi bi-eye me-1" aria-hidden="true"></i>View courses
+              </a>
+            </td>
           </tr>
-        </thead>
-        <tbody>
-          {% for student in students %}
-            <tr>
-              <td class="fw-semibold">{{ student.name }}</td>
-              <td>{{ student.get_level_display }}</td>
-              <td>{{ student.matric_no|default:"N/A" }}</td>
-              <td class="text-end">{{ student.course_count }}</td>
-              <td class="text-end">
-                <a class="btn btn-sm btn-outline-secondary" href="{% url 'registration:student_detail' student.pk %}">View courses</a>
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  {% else %}
-    <div class="alert alert-info">No students found.</div>
-  {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <div class="empty-state">
+    <i class="bi bi-people empty-icon" aria-hidden="true"></i>
+    <h2>No students found</h2>
+    <p>{% if query or selected_level %}Try a different name or level.{% else %}Students appear here once they register through the student pages.{% endif %}</p>
+    {% if query or selected_level %}
+      <a class="btn btn-outline-secondary" href="{% url 'registration:student_list' %}">Clear filters</a>
+    {% endif %}
+  </div>
+{% endif %}
 {% endblock %}

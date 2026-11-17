@@ -3,66 +3,135 @@
 {% block title %}My courses{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center page-heading">
-    <h1 class="h3 mb-0">My courses</h1>
-    <div>
-        <a class="btn btn-outline-secondary" href="{% url 'students:course_selection' %}">Select courses</a>
-        {% if registrations %}
-            <a class="btn btn-outline-primary" href="{% url 'students:printable_form' %}">Print form</a>
-        {% endif %}
-    </div>
+<div class="page-heading">
+  <h1>My courses</h1>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-outline-secondary" href="{% url 'students:course_selection' %}">
+      <i class="bi bi-pencil-square me-1" aria-hidden="true"></i>Select courses
+    </a>
+    {% if registrations %}
+      <a class="btn btn-primary" href="{% url 'students:printable_form' %}">
+        <i class="bi bi-printer me-1" aria-hidden="true"></i>Print form
+      </a>
+    {% endif %}
+  </div>
 </div>
 
-<p class="text-muted">
-    {{ student.name }} &middot; {{ student.get_level_display }}
-    {% if student.matric_no %}&middot; {{ student.matric_no }}{% endif %}
-</p>
+<div class="card summary-card mb-4">
+  <div class="card-body">
+    <div class="summary-row">
+      <div class="summary-item">
+        <span class="summary-label">Student</span>
+        <span class="summary-value">{{ student.name }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Level</span>
+        <span class="summary-value">{{ student.get_level_display }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Matric number</span>
+        <span class="summary-value">{{ student.matric_no|default:"N/A" }}</span>
+      </div>
+    </div>
+
+    <div class="credit-meter-label">
+      <span>Credit units used</span>
+      <span><strong>{{ total_credit_units }}</strong> of {{ max_credit_units }}</span>
+    </div>
+    <div class="progress credit-progress" role="progressbar"
+         aria-label="Credit units used"
+         aria-valuemin="0" aria-valuemax="{{ max_credit_units }}"
+         aria-valuenow="{{ total_credit_units }}">
+      <div class="progress-bar{% if total_credit_units > max_credit_units %} bg-danger{% endif %}"
+           style="width: {{ credit_percent }}%"></div>
+    </div>
+  </div>
+</div>
 
 {% if registrations %}
-    <div class="table-responsive">
-        <table class="table table-striped table-courses align-middle">
-            <thead>
-                <tr>
-                    <th scope="col">Code</th>
-                    <th scope="col">Title</th>
-                    <th scope="col" class="text-end">Units</th>
-                    <th scope="col">Type</th>
-                    <th scope="col" class="text-end">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for registration in registrations %}
-                    <tr>
-                        <td class="fw-semibold">{{ registration.course.code }}</td>
-                        <td>{{ registration.course.title }}</td>
-                        <td class="text-end">{{ registration.course.credit_units }}</td>
-                        <td>{{ registration.course.get_course_type_display }}</td>
-                        <td class="text-end">
-                            <form method="post" action="{% url 'students:remove_course' registration.pk %}" class="d-inline">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
-                            </form>
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-            <tfoot>
-                <tr>
-                    <th scope="row" colspan="2">Total</th>
-                    <th scope="row" class="text-end">{{ total_credit_units }}</th>
-                    <th colspan="2"></th>
-                </tr>
-            </tfoot>
-        </table>
-    </div>
+  <div class="table-responsive course-table-wrap">
+    <table class="table table-courses align-middle">
+      <caption class="visually-hidden">Your registered courses</caption>
+      <thead>
+        <tr>
+          <th scope="col">Code</th>
+          <th scope="col">Title</th>
+          <th scope="col" class="text-end">Units</th>
+          <th scope="col">Type</th>
+          <th scope="col" class="text-end"><span class="visually-hidden">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for registration in registrations %}
+          <tr>
+            <td class="fw-semibold">{{ registration.course.code }}</td>
+            <td>{{ registration.course.title }}</td>
+            <td class="text-end">{{ registration.course.credit_units }}</td>
+            <td>
+              {% if registration.course.course_type == "Core" %}
+                <span class="badge badge-core">Core</span>
+              {% else %}
+                <span class="badge badge-elective">Elective</span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              <form method="post" action="{% url 'students:remove_course' registration.pk %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-danger"
+                        onclick="return confirm('Remove {{ registration.course.code|escapejs }} from your registration?');">
+                  <i class="bi bi-x-lg me-1" aria-hidden="true"></i>Remove
+                </button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <th scope="row" colspan="2">Total credit units</th>
+          <th class="text-end">{{ total_credit_units }}</th>
+          <td colspan="2"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
 
-    <p class="text-muted small">
-        {{ total_credit_units }} of {{ max_credit_units }} credit units used.
-    </p>
+  <!-- Narrow screens: stacked cards -->
+  <div class="course-cards">
+    {% for registration in registrations %}
+      <div class="course-card">
+        <div class="course-card-body">
+          <span class="course-card-code">{{ registration.course.code }}</span>
+          <span class="course-card-title">{{ registration.course.title }}</span>
+          <div class="course-card-meta">
+            <span>{{ registration.course.credit_units }} credit unit{{ registration.course.credit_units|pluralize }}</span>
+            {% if registration.course.course_type == "Core" %}
+              <span class="badge badge-core">Core</span>
+            {% else %}
+              <span class="badge badge-elective">Elective</span>
+            {% endif %}
+          </div>
+        </div>
+        <form method="post" action="{% url 'students:remove_course' registration.pk %}" class="mb-0">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm btn-outline-danger"
+                  onclick="return confirm('Remove {{ registration.course.code|escapejs }} from your registration?');">
+            <i class="bi bi-x-lg" aria-hidden="true"></i>
+            <span class="visually-hidden">Remove {{ registration.course.code }}</span>
+          </button>
+        </form>
+      </div>
+    {% endfor %}
+    <p class="fw-semibold text-end mb-0">Total credit units: {{ total_credit_units }}</p>
+  </div>
 {% else %}
-    <div class="alert alert-info">
-        You have not registered for any courses yet.
-        <a href="{% url 'students:course_selection' %}">Select courses</a> to begin.
-    </div>
+  <div class="empty-state">
+    <i class="bi bi-journal-plus empty-icon" aria-hidden="true"></i>
+    <h2>No courses yet</h2>
+    <p>You have not registered for any courses. Pick the courses you are taking and save.</p>
+    <a class="btn btn-primary" href="{% url 'students:course_selection' %}">
+      <i class="bi bi-pencil-square me-1" aria-hidden="true"></i>Select courses
+    </a>
+  </div>
 {% endif %}
 {% endblock %}
