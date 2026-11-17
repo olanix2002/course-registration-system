@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm
 
-from .models import Course
+from .models import Course, Level, Student, normalise_name
 
 
 class StaffLoginForm(AuthenticationForm):
@@ -39,3 +39,64 @@ class CourseForm(forms.ModelForm):
         if not code:
             raise forms.ValidationError("Enter a course code.")
         return code
+
+
+class StudentIdentifyForm(forms.Form):
+    """Identify the student using the public pages.
+
+    Students do not have accounts. They give a name and level, and the same
+    name at the same level always resolves to the same record, so a student
+    who comes back sees the courses they already registered for.
+    """
+
+    name = forms.CharField(
+        max_length=150,
+        label="Full name",
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-control",
+                "autofocus": True,
+                "placeholder": "e.g. Amina Bello",
+            }
+        ),
+    )
+    level = forms.TypedChoiceField(
+        choices=Level.choices,
+        coerce=int,
+        label="Level",
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+    matric_no = forms.CharField(
+        max_length=30,
+        required=False,
+        label="Matriculation number",
+        widget=forms.TextInput(
+            attrs={"class": "form-control", "placeholder": "Optional"}
+        ),
+    )
+
+    def clean_name(self):
+        # "  amina   bello " and "Amina Bello" must be the same student.
+        name = normalise_name(self.cleaned_data["name"])
+        if not name:
+            raise forms.ValidationError("Enter your full name.")
+        return name
+
+    def clean_matric_no(self):
+        return normalise_name(self.cleaned_data["matric_no"])
+
+    def save(self):
+        """Return the matching student, creating the record on first visit."""
+        name = self.cleaned_data["name"]
+        level = self.cleaned_data["level"]
+        matric_no = self.cleaned_data["matric_no"]
+
+        student, created = Student.objects.get_or_create(
+            name__iexact=name,
+            level=level,
+            defaults={"name": name, "matric_no": matric_no},
+        )
+        if not created and matric_no and not student.matric_no:
+            student.matric_no = matric_no
+            student.save(update_fields=["matric_no"])
+        return student

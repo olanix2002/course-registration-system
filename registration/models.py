@@ -3,6 +3,22 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models.functions import Lower
 
+# A student may not hold more than this many credit units in total.
+MAX_CREDIT_UNITS = 24
+
+# Session key holding the id of the student using the public pages.
+STUDENT_SESSION_KEY = "student_id"
+
+
+def normalise_name(value):
+    """Trim a name and collapse runs of whitespace into single spaces.
+
+    "  amina   bello " becomes "Amina Bello" once the caller applies casing;
+    this helper only handles the whitespace, so the stored name keeps whatever
+    capitalisation the student typed.
+    """
+    return " ".join((value or "").split())
+
 
 class Level(models.IntegerChoices):
     LEVEL_100 = 100, "100 Level"

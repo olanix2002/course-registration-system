@@ -1,0 +1,77 @@
+{% extends "registration/base.html" %}
+
+{% block title %}Registration form{% endblock %}
+
+{% block content %}
+<div class="print-form">
+    <header class="print-header">
+        <h1 class="h4 mb-1">{{ INSTITUTION_NAME }}</h1>
+        <p class="mb-0">Course Registration Form</p>
+    </header>
+
+    <dl class="row mt-4 mb-4 print-details">
+        <dt class="col-sm-3">Name</dt>
+        <dd class="col-sm-9">{{ student.name }}</dd>
+
+        <dt class="col-sm-3">Level</dt>
+        <dd class="col-sm-9">{{ student.get_level_display }}</dd>
+
+        <dt class="col-sm-3">Matriculation number</dt>
+        <dd class="col-sm-9">{{ student.matric_no|default:"—" }}</dd>
+
+        <dt class="col-sm-3">Courses registered</dt>
+        <dd class="col-sm-9">{{ registrations|length }}</dd>
+
+        <dt class="col-sm-3">Total credit units</dt>
+        <dd class="col-sm-9">{{ total_credit_units }}</dd>
+    </dl>
+
+    {% if registrations %}
+        <table class="table table-bordered table-courses print-table">
+            <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Code</th>
+                    <th scope="col">Title</th>
+                    <th scope="col" class="text-end">Units</th>
+                    <th scope="col">Type</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for registration in registrations %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td class="fw-semibold">{{ registration.course.code }}</td>
+                        <td>{{ registration.course.title }}</td>
+                        <td class="text-end">{{ registration.course.credit_units }}</td>
+                        <td>{{ registration.course.get_course_type_display }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th scope="row" colspan="3">Total credit units</th>
+                    <th scope="row" class="text-end">{{ total_credit_units }}</th>
+                    <th></th>
+                </tr>
+            </tfoot>
+        </table>
+    {% else %}
+        <p class="fst-italic">No courses registered.</p>
+    {% endif %}
+
+    <div class="row mt-5 print-signatures">
+        <div class="col-6">
+            <div class="signature-line">Student's signature and date</div>
+        </div>
+        <div class="col-6">
+            <div class="signature-line">Adviser's signature and date</div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4 d-print-none">
+    <button type="button" class="btn btn-primary" onclick="window.print()">Print this form</button>
+    <a class="btn btn-outline-secondary" href="{% url 'students:my_courses' %}">Back to my courses</a>
+</div>
+{% endblock %}

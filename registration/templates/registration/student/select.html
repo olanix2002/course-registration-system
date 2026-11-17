@@ -1,0 +1,99 @@
+{% extends "registration/base.html" %}
+{% load static %}
+
+{% block title %}Select courses{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center page-heading">
+    <h1 class="h3 mb-0">Select courses</h1>
+    <a class="btn btn-outline-secondary d-print-none" href="{% url 'students:my_courses' %}">My courses</a>
+</div>
+
+<p class="text-muted">
+    {{ student.name }} &middot; {{ student.get_level_display }}.
+    Only active {{ student.get_level_display|lower }} courses are listed.
+</p>
+
+{% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+
+{% if courses %}
+    <form method="post" data-credit-total data-max-units="{{ max_credit_units }}">
+        {% csrf_token %}
+
+        <div class="table-responsive">
+            <table class="table table-striped table-courses align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col" class="check-column"></th>
+                        <th scope="col">Code</th>
+                        <th scope="col">Title</th>
+                        <th scope="col" class="text-end">Units</th>
+                        <th scope="col">Type</th>
+                        <th scope="col">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for course in courses %}
+                        <tr>
+                            <td class="check-column">
+                                <input type="checkbox"
+                                       class="form-check-input"
+                                       name="courses"
+                                       value="{{ course.pk }}"
+                                       id="course-{{ course.pk }}"
+                                       data-credit-units="{{ course.credit_units }}"
+                                       {% if course.pk in registered_ids %}checked disabled{% elif course.pk in selected_ids %}checked{% endif %}>
+                            </td>
+                            <td class="fw-semibold">
+                                <label class="form-check-label mb-0" for="course-{{ course.pk }}">{{ course.code }}</label>
+                            </td>
+                            <td>{{ course.title }}</td>
+                            <td class="text-end">{{ course.credit_units }}</td>
+                            <td>{{ course.get_course_type_display }}</td>
+                            <td>
+                                {% if course.pk in registered_ids %}
+                                    <span class="badge text-bg-success">Registered</span>
+                                {% else %}
+                                    <span class="badge text-bg-light">Available</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center credit-total-bar">
+            <div>
+                <span class="text-muted">Running total:</span>
+                <strong><span data-credit-total-output>{{ total_credit_units }}</span> credit units</strong>
+                <span class="text-muted">of {{ max_credit_units }} allowed</span>
+            </div>
+            <button type="submit" class="btn btn-primary">Save registration</button>
+        </div>
+
+        <div class="alert alert-warning mt-3" data-credit-total-warning hidden>
+            That is more than the {{ max_credit_units }} credit units allowed.
+            Untick a course before saving.
+        </div>
+
+        <p class="text-muted small mt-3">
+            Courses marked <span class="badge text-bg-success">Registered</span> are already
+            on your registration. Remove them from
+            <a href="{% url 'students:my_courses' %}">My courses</a>.
+        </p>
+    </form>
+{% else %}
+    <div class="alert alert-info">
+        No active courses are available at {{ student.get_level_display|lower }} level yet.
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+    {% if courses %}
+        <script src="{% static 'registration/js/credit-total.js' %}"></script>
+    {% endif %}
+{% endblock %}
