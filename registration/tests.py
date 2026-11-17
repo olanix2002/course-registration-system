@@ -1,5 +1,8 @@
+from io import StringIO
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
 from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -324,11 +327,11 @@ class StudentPrintableFormTests(TestCase):
         self.assertContains(response, "Amina Bello")
         self.assertContains(response, "100 Level")
 
-    def test_matric_number_falls_back_to_a_dash(self):
+    def test_matric_number_falls_back_to_not_available(self):
         self.student.matric_no = ""
         self.student.save(update_fields=["matric_no"])
         response = self.get_form()
-        self.assertContains(response, "—")
+        self.assertContains(response, "N/A")
 
     def test_each_course_row_is_shown(self):
         response = self.get_form()
@@ -382,3 +385,91 @@ class StudentPrintableFormTests(TestCase):
         self.assertNotContains(response, "Amina Bello")
         self.assertNotContains(response, "U20PH1234")
         self.assertNotContains(response, "PHY101")
+
+
+class SeedDataCommandTests(TestCase):
+    """The sample data command is safe to repeat and leaves staff alone."""
+
+    def run_seed(self):
+        call_command("seed_data", stdout=StringIO())
+
+    def test_courses_cover_all_five_levels_with_both_types(self):
+        self.run_seed()
+        self.assertEqual(
+            set(Course.objects.values_list("level", flat=True)),
+            {100, 200, 300, 400, 500},
+        )
+        self.assertEqual(
+            set(Course.objects.values_list("course_type", flat=True)),
+            {CourseType.CORE, CourseType.ELECTIVE},
+        )
+
+    def test_two_students_have_registrations(self):
+        self.run_seed()
+        self.assertEqual(Student.objects.count(), 2)
+        for student in Student.objects.all():
+            self.assertGreater(student.registrations.count(), 0)
+
+    def test_students_are_registered_within_the_credit_cap(self):
+        self.run_seed()
+        for student in Student.objects.all():
+            total = sum(
+                registration.course.credit_units
+                for registration in student.registrations.select_related("course")
+            )
+            self.assertLessEqual(total, MAX_CREDIT_UNITS)
+
+    def test_students_only_hold_courses_at_their_own_level(self):
+        self.run_seed()
+        for student in Student.objects.all():
+            levels = set(
+                student.registrations.values_list("course__level", flat=True)
+            )
+            self.assertEqual(levels, {student.level})
+
+    def test_running_twice_changes_nothing(self):
+        self.run_seed()
+        first = (
+            Course.objects.count(),
+            Student.objects.count(),
+            Registration.objects.count(),
+        )
+        self.run_seed()
+        second = (
+            Course.objects.count(),
+            Student.objects.count(),
+            Registration.objects.count(),
+        )
+        self.assertEqual(first, second)
+        self.assertEqual(second, (15, 2, 6))
+
+    def test_staff_accounts_are_not_created_or_changed(self):
+        staff = User.objects.create_user(
+            username="admin", password="secret123", is_staff=True
+        )
+        before = (
+            User.objects.count(),
+            staff.pk,
+            staff.username,
+            staff.password,
+            staff.is_staff,
+            staff.is_superuser,
+            staff.is_active,
+            staff.last_login,
+        )
+
+        self.run_seed()
+
+        staff.refresh_from_db()
+        after = (
+            User.objects.count(),
+            staff.pk,
+            staff.username,
+            staff.password,
+            staff.is_staff,
+            staff.is_superuser,
+            staff.is_active,
+            staff.last_login,
+        )
+        self.assertEqual(before, after)
+        self.assertEqual(User.objects.count(), 1)

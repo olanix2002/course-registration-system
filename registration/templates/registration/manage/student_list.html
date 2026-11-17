@@ -44,7 +44,7 @@
             <tr>
               <td class="fw-semibold">{{ student.name }}</td>
               <td>{{ student.get_level_display }}</td>
-              <td>{{ student.matric_no|default:"—" }}</td>
+              <td>{{ student.matric_no|default:"N/A" }}</td>
               <td class="text-end">{{ student.course_count }}</td>
               <td class="text-end">
                 <a class="btn btn-sm btn-outline-secondary" href="{% url 'registration:student_detail' student.pk %}">View courses</a>

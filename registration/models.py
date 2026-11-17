@@ -121,4 +121,4 @@ class Registration(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.student.name} — {self.course.code}"
+        return f"{self.student.name} ({self.course.code})"
