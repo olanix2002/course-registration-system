@@ -235,6 +235,200 @@ class StudentCourseSelectionTests(TestCase):
         response = self.client.get(reverse("students:my_courses"))
         self.assertEqual(response.context["total_credit_units"], 5)
 
+    def test_duplicate_course_ids_register_once(self):
+        # The same course id posted twice must not add credit units twice.
+        response = self.client.post(
+            reverse("students:course_selection"),
+            {"courses": [self.course_a.pk, self.course_a.pk]},
+        )
+        self.assertRedirects(response, reverse("students:my_courses"))
+        self.assertEqual(Registration.objects.count(), 1)
+        my_courses = self.client.get(reverse("students:my_courses"))
+        self.assertEqual(my_courses.context["total_credit_units"], 3)
+
+    def test_empty_submission_is_accepted_and_registers_nothing(self):
+        # The selection page is additive, so no tick boxes means no change.
+        response = self.client.post(reverse("students:course_selection"), {})
+        self.assertRedirects(response, reverse("students:my_courses"))
+        self.assertEqual(Registration.objects.count(), 0)
+
+
+class AdditiveSubmissionTests(TestCase):
+    """Submitting the selection page again adds to the old selection."""
+
+    def setUp(self):
+        self.course_a = Course.objects.create(
+            code="PHY101", title="Mechanics", level=100, credit_units=3
+        )
+        self.course_b = Course.objects.create(
+            code="PHY102", title="Electricity", level=100, credit_units=2
+        )
+        self.student = Student.objects.create(name="Amina Bello", level=100)
+        session = self.client.session
+        session["student_id"] = self.student.pk
+        session.save()
+
+    def select(self, *courses):
+        return self.client.post(
+            reverse("students:course_selection"),
+            {"courses": [course.pk for course in courses]},
+        )
+
+    def registered_codes(self):
+        return sorted(
+            Registration.objects.filter(student=self.student).values_list(
+                "course__code", flat=True
+            )
+        )
+
+    def test_second_submission_keeps_the_first_selection(self):
+        self.select(self.course_a)
+        self.select(self.course_b)
+        self.assertEqual(self.registered_codes(), ["PHY101", "PHY102"])
+
+    def test_cap_counts_units_already_registered(self):
+        # 20 units already held, plus 5 more, is over the 24 unit cap.
+        held = [
+            Course.objects.create(
+                code=f"HLD{index}", title="Held", level=100, credit_units=5
+            )
+            for index in range(4)
+        ]
+        self.select(*held)
+        self.assertEqual(Registration.objects.count(), 4)
+
+        extra = Course.objects.create(
+            code="XTRA1", title="Extra", level=100, credit_units=5
+        )
+        response = self.select(extra)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "That would bring you to 25 credit units")
+        self.assertNotIn("XTRA1", self.registered_codes())
+        self.assertEqual(Registration.objects.count(), 4)
+
+
+class CourseModelTests(TestCase):
+    """Model level rules that the views rely on."""
+
+    def test_duplicate_registration_is_rejected_by_the_database(self):
+        from django.db import IntegrityError, transaction
+
+        course = Course.objects.create(
+            code="PHY101", title="Mechanics", level=100, credit_units=3
+        )
+        student = Student.objects.create(name="Amina Bello", level=100)
+        Registration.objects.create(student=student, course=course)
+
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                Registration.objects.create(student=student, course=course)
+
+        self.assertEqual(Registration.objects.filter(student=student).count(), 1)
+
+    def test_course_code_is_normalised_to_uppercase(self):
+        from .forms import CourseForm
+
+        form = CourseForm(
+            data={
+                "code": "  csc101  ",
+                "title": "Intro",
+                "level": 100,
+                "credit_units": 3,
+                "course_type": CourseType.CORE,
+            }
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.save().code, "CSC101")
+
+    def test_duplicate_course_code_is_rejected(self):
+        from .forms import CourseForm
+
+        Course.objects.create(code="CSC101", title="Intro", level=100)
+        form = CourseForm(
+            data={
+                "code": "csc101",
+                "title": "Another",
+                "level": 200,
+                "credit_units": 3,
+                "course_type": CourseType.CORE,
+            }
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("code", form.errors)
+        self.assertEqual(Course.objects.count(), 1)
+
+
+class StaffCourseManagementTests(TestCase):
+    """Staff create, edit and deactivate courses through /manage/."""
+
+    def setUp(self):
+        self.staff = User.objects.create_user(
+            username="staffer", password="staff-pass-123", is_staff=True
+        )
+        self.client.force_login(self.staff)
+
+    def test_staff_can_create_a_course(self):
+        response = self.client.post(
+            reverse("registration:course_create"),
+            {
+                "code": "csc101",
+                "title": "Intro to Computing",
+                "level": 100,
+                "credit_units": 3,
+                "course_type": CourseType.CORE,
+            },
+        )
+        self.assertRedirects(response, reverse("registration:course_list"))
+        course = Course.objects.get()
+        self.assertEqual(course.code, "CSC101")
+        self.assertEqual(course.title, "Intro to Computing")
+
+    def test_staff_can_edit_a_course(self):
+        course = Course.objects.create(
+            code="CSC101", title="Intro", level=100, credit_units=3
+        )
+        response = self.client.post(
+            reverse("registration:course_edit", args=[course.pk]),
+            {
+                "code": "CSC101",
+                "title": "Introduction to Computing",
+                "level": 200,
+                "credit_units": 4,
+                "course_type": CourseType.ELECTIVE,
+            },
+        )
+        self.assertRedirects(response, reverse("registration:course_list"))
+        course.refresh_from_db()
+        self.assertEqual(course.title, "Introduction to Computing")
+        self.assertEqual(course.level, 200)
+        self.assertEqual(course.credit_units, 4)
+        self.assertEqual(course.course_type, CourseType.ELECTIVE)
+
+
+class DeactivationHidesCourseTests(TestCase):
+    """A deactivated course disappears from the student selection page."""
+
+    def setUp(self):
+        self.course = Course.objects.create(
+            code="PHY101", title="Mechanics", level=100, credit_units=3
+        )
+        self.student = Student.objects.create(name="Amina Bello", level=100)
+        session = self.client.session
+        session["student_id"] = self.student.pk
+        session.save()
+
+    def test_deactivation_removes_the_course_from_the_selection_page(self):
+        before = self.client.get(reverse("students:course_selection"))
+        self.assertContains(before, "PHY101")
+
+        self.course.is_active = False
+        self.course.save(update_fields=["is_active"])
+
+        after = self.client.get(reverse("students:course_selection"))
+        self.assertNotContains(after, "PHY101")
+        self.assertEqual(after.context["courses"], [])
+
 
 class StudentMyCoursesTests(TestCase):
     def setUp(self):
