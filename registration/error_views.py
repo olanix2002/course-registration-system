@@ -1,13 +1,30 @@
-"""The CSRF failure page.
-
-Django calls the view named by settings.CSRF_FAILURE_VIEW when a request
-arrives without a valid CSRF token. It does not pass a request object, so
-there is no session and no database access here. The template it renders is
-standalone for the same reason.
-"""
-
-from django.template import loader
 from django.http import HttpResponse
+from django.template import loader
+
+
+def _render(template_name, status):
+    """Render an error page without a request, so no context processor runs."""
+    return HttpResponse(
+        loader.get_template(template_name).render(),
+        status=status,
+        content_type="text/html; charset=utf-8",
+    )
+
+
+def bad_request(request, exception=None):
+    return _render("registration/errors/400.html", 400)
+
+
+def permission_denied(request, exception=None):
+    return _render("registration/errors/403.html", 403)
+
+
+def page_not_found(request, exception=None):
+    return _render("registration/errors/404.html", 404)
+
+
+def server_error(request):
+    return _render("registration/errors/500.html", 500)
 
 
 def csrf_failure(request, reason=""):
@@ -18,13 +35,8 @@ def csrf_failure(request, reason=""):
     open over lunch.
 
     The template is rendered without the request, so the context processors
-    do not run. That matters: Django raises CSRF failures in middleware,
-    before the session is loaded, and registration.context_processors
-    .current_student reads request.session, which would raise AttributeError
-    inside the error page itself.
+    do not run. Django raises CSRF failures in middleware, before the session
+    is loaded, and registration.context_processors.current_student reads
+    request.session, which would raise AttributeError inside the error page.
     """
-    return HttpResponse(
-        loader.get_template("registration/errors/csrf.html").render(),
-        status=403,
-        content_type="text/html; charset=utf-8",
-    )
+    return _render("registration/errors/csrf.html", 403)

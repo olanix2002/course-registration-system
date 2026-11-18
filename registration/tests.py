@@ -1,5 +1,6 @@
 import re
 from io import StringIO
+from pathlib import Path
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -11,6 +12,67 @@ from django.utils import timezone
 from .models import MAX_CREDIT_UNITS, Course, CourseType, Registration, Student
 
 User = get_user_model()
+
+
+class NoRawTemplateSyntaxTests(TestCase):
+    """Rendered pages must never show template comment or tag syntax."""
+
+    MARKERS = ["{#", "#}", "{%", "%}"]
+
+    def assert_clean(self, client, url, label):
+        response = client.get(url)
+        if response.status_code == 302:
+            response = client.get(response["Location"])
+        self.assertEqual(response.status_code, 200, label)
+        body = response.content.decode()
+        for marker in self.MARKERS:
+            with self.subTest(label=label, marker=marker):
+                self.assertNotIn(marker, body)
+
+    def test_public_pages_do_not_show_raw_template_syntax(self):
+        staff = User.objects.create_user(
+            username="staffer", password="staff-pass-123", is_staff=True
+        )
+        course = Course.objects.create(
+            code="CSC101", title="Intro", level=100, credit_units=3
+        )
+        student = Student.objects.create(name="Amina Bello", level=100)
+        session = self.client.session
+        session["student_id"] = student.pk
+        session.save()
+
+        for name, label in [
+            ("students:home", "identify"),
+            ("students:course_selection", "selection"),
+            ("students:my_courses", "my courses"),
+            ("students:printable_form", "printable form"),
+        ]:
+            with self.subTest(page=label):
+                self.assert_clean(self.client, reverse(name), label)
+
+        self.assert_clean(Client(), reverse("registration:login"), "login")
+
+        staff_client = Client()
+        staff_client.force_login(staff)
+        for name, args, label in [
+            ("registration:home", (), "staff home"),
+            ("registration:course_list", (), "course list"),
+            ("registration:course_create", (), "course form"),
+            ("registration:course_edit", (course.pk,), "edit course"),
+            ("registration:student_list", (), "student list"),
+            ("registration:student_detail", (student.pk,), "student detail"),
+        ]:
+            with self.subTest(page=label):
+                self.assert_clean(staff_client, reverse(name, args=args), label)
+
+    def test_template_files_do_not_open_an_inline_comment_left_unclosed(self):
+        template_dir = Path(__file__).resolve().parent / "templates"
+        for path in sorted(template_dir.rglob("*.html")):
+            for number, line in enumerate(
+                path.read_text(encoding="utf-8").splitlines(), start=1
+            ):
+                with self.subTest(path=path.name, line=number):
+                    self.assertEqual("{#" in line, "#}" in line)
 
 
 class StaffAccessTests(TestCase):
