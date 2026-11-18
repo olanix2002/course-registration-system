@@ -145,7 +145,8 @@ registration/    the only app
 ## Deployment
 
 Render for the web service, Neon for PostgreSQL. The steps are in
-[DEPLOYMENT.md](DEPLOYMENT.md).
+[DEPLOYMENT.md](DEPLOYMENT.md). `DATABASE_URL` takes the Neon **direct**
+connection string, the one whose host has no `-pooler`.
 
 Quick summary: `render.yaml` sets the build and start commands, `build.sh` runs
 the build steps, and `.python-version` pins Python 3.12. Environment variables

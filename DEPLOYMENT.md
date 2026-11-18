@@ -19,40 +19,40 @@ Render or Neon account, so treat the first deploy as something to watch.
 1. Sign in at https://console.neon.tech and create a project. Pick the region
    closest to your Render region, for example Frankfurt if Render runs in
    Frankfurt.
-2. In the project dashboard, open **Connection string** and copy the
-   **pooled** connection string. It looks like:
+2. In the project dashboard, open **Connection string** and switch it to
+   **direct** rather than pooled. Copy the direct string, the one whose host
+   does not contain `-pooler`. It looks like:
 
    ```
-   postgresql://USER:PASSWORD@ep-something-pooler.REGION.aws.neon.tech/DBNAME?sslmode=require
+   postgresql://USER:PASSWORD@ep-something.REGION.aws.neon.tech/DBNAME?sslmode=require
    ```
 
-   The host contains `-pooler`. Keep `?sslmode=require` on the end. The project
-   adds `sslmode=require` itself when the string has no `sslmode`, but keeping
-   it explicit is clearer.
-3. Also copy the **direct** connection string, the one without `-pooler` in the
-   host. You will need it in step 4.
+   Keep `?sslmode=require` on the end. The project adds `sslmode=require`
+   itself when the string has no `sslmode`, but keeping it explicit is clearer.
+3. That direct string is the value you paste into Render as `DATABASE_URL` in
+   step 4.
 
-### About pooled versus direct connections
+### Use the direct connection string, not the pooled one
 
-The pooled string is the right value for `DATABASE_URL` at runtime, because
-Render's free plan runs a small number of workers and pooling keeps the
-connection count low.
+Neon offers two connection strings, and this project uses the **direct** one
+for `DATABASE_URL` everywhere: the Render environment variable, the migration
+step in `build.sh`, and any local command you run against the live database.
 
-Migrations are the one place where the pooled connection can cause trouble.
-Neon's pooler runs in transaction mode, which does not support every session
-level feature, and Django's migration runner holds a session open for the whole
-run. If `migrate` fails during the build with an error about prepared
-statements or an unsupported command, run the migrations once against the
-direct string instead:
+The direct string keeps every session on its own connection, so Django's
+migration runner behaves exactly as it does locally and session level features
+such as prepared statements work without restriction. The pooled string routes
+through Neon's pooler in transaction mode, which does not support the full set
+of session level features, and it is the usual cause of `migrate` failing
+during a build with an error about prepared statements or an unsupported
+command.
 
-```bash
-DATABASE_URL="postgresql://USER:PASSWORD@ep-something.REGION.aws.neon.tech/DBNAME?sslmode=require" python manage.py migrate --noinput
-```
+Because the build and the running app both use the direct string, there is no
+separate migration step to remember. `build.sh` runs `migrate` against the same
+`DATABASE_URL` the web process uses.
 
-Run that from a machine that can reach Neon, with the direct host, then leave
-`DATABASE_URL` on Render set to the pooled string. In many cases the pooled
-string works for migrations as well, so try the normal build first and only
-switch if it fails.
+If a future change ever needs pooling for connection limits, keep the direct
+string for migrations and use the pooler for runtime only. Do not point both
+at the pooler.
 
 ## Step 2: Push the repository to GitHub
 
@@ -101,7 +101,7 @@ Environment Variable** once per row.
 | --- | --- |
 | `SECRET_KEY` | A long random string. Generate one with the command below. |
 | `DEBUG` | `False` |
-| `DATABASE_URL` | The Neon **pooled** connection string from step 1 |
+| `DATABASE_URL` | The Neon **direct** connection string from step 1 |
 | `ADMIN_USERNAME` | The staff username you want, for example `admin` |
 | `ADMIN_PASSWORD` | A strong password for that staff account |
 | `INSTITUTION_NAME` | `SchoolTry` |
