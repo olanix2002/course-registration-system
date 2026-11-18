@@ -139,6 +139,16 @@ html {
   color: #fff;
   background-color: rgba(255, 255, 255, 0.14);
 }
+/* The way from a student page back to the staff area. Smaller than the
+   student links around it, so it reads as a utility rather than a tab. */
+.app-navbar .nav-link.nav-link-staff {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+.app-navbar .nav-link.nav-link-staff:hover,
+.app-navbar .nav-link.nav-link-staff:focus {
+  color: #fff;
+}
 .app-navbar .navbar-toggler {
   border-color: rgba(255, 255, 255, 0.4);
   min-width: 44px;
@@ -361,13 +371,15 @@ html {
   margin-bottom: 1.25rem;
 }
 
-/* Tables. No overflow property is set here on purpose.
+/* Tables. The wrapper draws the card border, radius and shadow. The table
+   inside has no bottom margin and no bottom border on its last row, so the
+   wrapper is exactly as tall as the rows are.
 
-   Setting overflow-x alone creates a scroll container in the other axis too:
-   per CSS, a visible value for the other axis computes to auto. That gave a
-   nested vertical scrollbar inside every wrapper. Without any overflow the
-   wrapper is never a scroll container, only the page scrolls, and
-   border-radius clips the corners because there is no scroll box to escape. */
+   Bootstrap's .table-responsive sets overflow-x: auto. Per CSS, a value
+   other than visible in one axis computes the other axis to auto too, so
+   the wrapper was also a vertical scroll container, and it drew a scrollbar
+   for a one pixel overflow. Which axis a wrapper may scroll is therefore
+   decided per width further down, not here. */
 .table-responsive {
   border: 1px solid var(--app-line);
   border-radius: var(--app-radius);
@@ -784,13 +796,31 @@ html {
   flex: 1 1 auto;
 }
 
-/* Staff tables carry seven and five columns and can outgrow a tablet. Only
-   between 768px and 991px is a sideways scroll needed, because under 768px
-   the same data is shown as cards. Wide screens fit, so they get no scroll
-   container at all. */
+/* From 768px up no wrapper is a vertical scroll container, so the one pixel
+   overflow has nothing to open a scrollbar on. overflow: clip is used
+   instead of visible because the tinted header row still has to be trimmed
+   by the card's rounded corners, and clip does that without creating a
+   scroll box. Nothing is actually cut off: every table fits its wrapper at
+   these widths. Under 768px the wrappers keep Bootstrap's behaviour, since
+   the courses and students tables are replaced by cards there. */
+@media (min-width: 768px) {
+  .table-responsive {
+    /* hidden first as a fallback: it also draws no scrollbar. The later
+       clip wins wherever it is supported and keeps the rounded corners. */
+    overflow: hidden;
+    overflow: clip;
+  }
+}
+
+/* The staff tables carry seven and five columns and can outgrow a tablet.
+   Only between 768px and 991px is a sideways scroll needed, because under
+   768px the same data is shown as cards. overflow-y: hidden is what stops
+   the other axis becoming a vertical scroll box, and it draws no bar. Wide
+   screens fit, so they get no sideways scroll either. */
 @media (min-width: 768px) and (max-width: 991.98px) {
   .table-responsive.staff-table-wrap {
     overflow-x: auto;
+    overflow-y: hidden;
   }
 }
 

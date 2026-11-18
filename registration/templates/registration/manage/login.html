@@ -2,6 +2,12 @@
 
 {% block title %}Staff sign in{% endblock %}
 
+{% comment %}
+  The navbar here is the brand alone, even when a staff account is already
+  signed in: LoginView sends that visitor on to the course list
+  (redirect_authenticated_user), so this page never renders with a menu.
+{% endcomment %}
+
 {% block content %}
 <div class="center-page">
   <div class="auth-card">

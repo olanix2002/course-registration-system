@@ -180,4 +180,37 @@ LOGIN_URL = "registration:login"
 LOGIN_REDIRECT_URL = "registration:home"
 LOGOUT_REDIRECT_URL = "registration:login"
 
+# Request errors are written to stdout as plain text, which is what Render's
+# log view shows. Only the django.request logger is named, so the record is
+# the request path, the status code and the traceback. Request bodies, cookies
+# and environment values are never logged, and the other loggers keep Django's
+# defaults.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "plain": {
+            "format": "[{levelname}] {asctime} {name}: {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "stdout": {
+            "class": "logging.StreamHandler",
+            "stream": "ext://sys.stdout",
+            "formatter": "plain",
+        },
+    },
+    "loggers": {
+        "django.request": {
+            "handlers": ["stdout"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+    },
+}
+
+# A rejected CSRF token gets a friendly page instead of Django's bare default.
+CSRF_FAILURE_VIEW = "registration.error_views.csrf_failure"
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
