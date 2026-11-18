@@ -101,6 +101,10 @@ if database_url:
         "default": dj_database_url.parse(
             database_url,
             conn_max_age=600,
+            # Neon suspends idle compute, which drops the server side of a
+            # pooled connection. Checking the connection before reuse turns
+            # that into a transparent reconnect instead of a failed request.
+            conn_health_checks=True,
             # Neon requires TLS. ssl_require adds sslmode=require only when the
             # connection string does not already carry an sslmode setting.
             ssl_require="sslmode" not in database_url,
