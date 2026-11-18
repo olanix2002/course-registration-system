@@ -5,10 +5,31 @@ themselves by name and level, pick courses for their level, and print a
 registration form for signing. Staff sign in to manage courses and view
 students.
 
-## Live site
 
-Not deployed yet. Once it is, the URL goes here along with a note that Render's
-free instance sleeps when idle, so the first request takes a few seconds.
+## Live demo
+
+- Live site: https://schooltry-course-registration.onrender.com
+- Source code: https://github.com/olanix2002/course-registration-system
+
+The site runs on a free hosting plan, so the first request after a quiet period can take up to a minute while the service wakes up. After that it responds normally.
+
+### Try it as a student (no login needed)
+
+1. Open the live site, enter a name and a level (for example Amina Bello, 100 Level), and continue.
+2. Tick the courses you are taking and press Save registration. Unticking a course removes it.
+3. Open My courses to see your saved courses and the total credit units, then use Print form for the printable registration form.
+
+Sample students already exist: Amina Bello (100 Level) and Bola Ade (300 Level).
+
+### Try it as an administrator
+
+1. Go to https://schooltry-course-registration.onrender.com/manage/login/
+2. Sign in with the demo account:
+   - Username: admin
+   - Password: ifKtAQxhMVcImnY9
+3. Create or edit courses and assign each osne to a level, activate or deactivate courses, and open Students to see every student and the courses they registered for.
+
+The demo account and the sample data exist for review only.
 
 ## What it does
 
