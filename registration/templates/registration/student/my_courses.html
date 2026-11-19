@@ -7,7 +7,7 @@
   <h1>My courses</h1>
   <div class="d-flex flex-wrap gap-2">
     <a class="btn btn-outline-secondary" href="{% url 'students:course_selection' %}">
-      <i class="bi bi-pencil-square me-1" aria-hidden="true"></i>Select courses
+      <i class="bi bi-pencil me-1" aria-hidden="true"></i>Select courses
     </a>
     {% if registrations %}
       <a class="btn btn-primary" href="{% url 'students:printable_form' %}">
@@ -122,11 +122,11 @@
   </div>
 {% else %}
   <div class="empty-state">
-    <i class="bi bi-journal-plus empty-icon" aria-hidden="true"></i>
+    <i class="bi bi-inbox empty-icon" aria-hidden="true"></i>
     <h2>No courses yet</h2>
     <p>You have not registered for any courses. Pick the courses you are taking and save.</p>
     <a class="btn btn-primary" href="{% url 'students:course_selection' %}">
-      <i class="bi bi-pencil-square me-1" aria-hidden="true"></i>Select courses
+      <i class="bi bi-pencil me-1" aria-hidden="true"></i>Select courses
     </a>
   </div>
 {% endif %}

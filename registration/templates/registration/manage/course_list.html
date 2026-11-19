@@ -78,11 +78,11 @@
                   <input type="hidden" name="level" value="{{ selected_level }}">
                   {% if course.is_active %}
                     <button type="submit" class="btn btn-sm btn-outline-danger">
-                      <i class="bi bi-pause-circle me-1" aria-hidden="true"></i>Deactivate
+                      <i class="bi bi-pause me-1" aria-hidden="true"></i>Deactivate
                     </button>
                   {% else %}
                     <button type="submit" class="btn btn-sm btn-outline-success">
-                      <i class="bi bi-play-circle me-1" aria-hidden="true"></i>Activate
+                      <i class="bi bi-play me-1" aria-hidden="true"></i>Activate
                     </button>
                   {% endif %}
                 </form>
@@ -128,11 +128,11 @@
             <input type="hidden" name="level" value="{{ selected_level }}">
             {% if course.is_active %}
               <button type="submit" class="btn btn-sm btn-outline-danger">
-                <i class="bi bi-pause-circle me-1" aria-hidden="true"></i>Deactivate
+                <i class="bi bi-pause me-1" aria-hidden="true"></i>Deactivate
               </button>
             {% else %}
               <button type="submit" class="btn btn-sm btn-outline-success">
-                <i class="bi bi-play-circle me-1" aria-hidden="true"></i>Activate
+                <i class="bi bi-play me-1" aria-hidden="true"></i>Activate
               </button>
             {% endif %}
           </form>
@@ -142,7 +142,7 @@
   </div>
 {% else %}
   <div class="empty-state">
-    <i class="bi bi-journal-x empty-icon" aria-hidden="true"></i>
+    <i class="bi bi-inbox empty-icon" aria-hidden="true"></i>
     <h2>No courses found{% if selected_level %} at {{ selected_level }} level{% endif %}</h2>
     <p>Try another level, or create the first course.</p>
     <a class="btn btn-primary" href="{% url 'registration:course_create' %}">

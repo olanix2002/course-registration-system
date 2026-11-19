@@ -7,13 +7,13 @@
 <div class="page-heading">
   <h1>Select courses</h1>
   <a class="btn btn-outline-secondary" href="{% url 'students:my_courses' %}">
-    <i class="bi bi-list-check me-1" aria-hidden="true"></i>My courses
+    <i class="bi bi-journal-text me-1" aria-hidden="true"></i>My courses
   </a>
 </div>
 
 {% if error %}
   <div class="alert alert-danger" role="alert">
-    <i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i>{{ error }}
+    <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>{{ error }}
   </div>
 {% endif %}
 
@@ -115,7 +115,7 @@
               </div>
 
               <button type="submit" class="btn btn-primary w-100 mt-3" data-save-button>
-                <i class="bi bi-check2-circle me-1" aria-hidden="true"></i>Save registration
+                <i class="bi bi-check-lg me-1" aria-hidden="true"></i>Save registration
               </button>
             </div>
           </div>
@@ -133,7 +133,7 @@
   </form>
 {% else %}
   <div class="empty-state">
-    <i class="bi bi-journal-x empty-icon" aria-hidden="true"></i>
+    <i class="bi bi-inbox empty-icon" aria-hidden="true"></i>
     <h2>No courses available yet</h2>
     <p>There are no active courses at {{ student.get_level_display|lower }} level. Check back later.</p>
     <a class="btn btn-outline-secondary" href="{% url 'students:my_courses' %}">Go to my courses</a>
